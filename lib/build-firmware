@@ -1,0 +1,56 @@
+#!/bin/bash
+# Copyright © 2026 Stony Grey LLC.
+# SPDX-License-Identifier: MIT
+# Builds a firmware app (firmware/<app>) for BOARD (default
+# nrf54l15dk/nrf54l15/cpuapp; set BOARD=nrf52840dk/nrf52840 for the older kit).
+#
+# Usage: lib/build-firmware [--pristine] [noise|pake|edhoc]
+#   --pristine   full rebuild (required after Kconfig/prj.conf changes)
+#   app          which firmware app to build (default noise)
+#
+# Environment overrides:
+#   NCS_VERSION  nRF Connect SDK version   (default v3.4.0)
+#   BOARD        Zephyr board target       (default nrf54l15dk/nrf54l15/cpuapp)
+#   NCS_ROOT     SDK install root          (default: auto-detect, see below)
+#
+# Prerequisites: nrfutil on PATH (~/bin) with the sdk-manager command and the
+# matching SDK installed (see documents/build-deploy.md). Runs on macOS and
+# in WSL: the SDK lives under /opt/nordic/ncs on the Mac and ~/ncs in WSL
+# (no sudo needed there); NCS_ROOT is auto-detected from whichever exists.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+export PATH="$HOME/bin:$PATH"
+
+NCS_VERSION="${NCS_VERSION:-v3.4.0}"
+BOARD="${BOARD:-nrf54l15dk/nrf54l15/cpuapp}"
+
+if [[ -z "${NCS_ROOT:-}" ]]; then
+  for candidate in /opt/nordic/ncs "$HOME/ncs"; do
+    if [[ -d "$candidate/$NCS_VERSION" ]]; then
+      NCS_ROOT="$candidate"
+      break
+    fi
+  done
+  NCS_ROOT="${NCS_ROOT:-/opt/nordic/ncs}"
+fi
+
+PRISTINE=""
+APP="noise"
+for arg in "$@"; do
+  case "$arg" in
+    --pristine) PRISTINE="--pristine" ;;
+    noise|pake|edhoc) APP="$arg" ;;
+    *) echo "Usage: lib/build-firmware [--pristine] [noise|pake|edhoc]" >&2; exit 2 ;;
+  esac
+done
+
+APP_DIR="$(pwd)/firmware/$APP"
+BUILD_DIR="$APP_DIR/build"
+WORKSPACE="$NCS_ROOT/$NCS_VERSION"
+
+nrfutil sdk-manager toolchain launch --ncs-version "$NCS_VERSION" -- bash -c \
+  "cd '$WORKSPACE' && west build -b '$BOARD' -d '$BUILD_DIR' '$APP_DIR' $PRISTINE"
+
+# The hex path component is the sysbuild image name, which is the app dir name.
+echo "built: $BUILD_DIR/$APP/zephyr/zephyr.hex"

@@ -1,0 +1,23 @@
+<Project>
+  <!-- Copy this file to Directory.Build.local.props (gitignored) and fill in
+       values from your Apple Developer account. Needed for iOS device and
+       Mac Catalyst builds. Android, Windows, and the iOS simulator do not
+       require it. Command-line -p:Property= still overrides these. -->
+  <PropertyGroup>
+    <!-- Team ID from https://developer.apple.com/account → Membership. -->
+    <DevelopmentTeam>YOURTEAMID</DevelopmentTeam>
+
+    <!-- Optional: pin an identity when the keychain has more than one
+         Apple Development certificate. Keeps the macOS Bluetooth TCC grant
+         stable across rebuilds. -->
+    <!-- <CodesignKey>Apple Development: Your Name (XXXXXXXXXX)</CodesignKey> -->
+
+    <!-- Optional: iOS device provisioning profile. Automatic signing is
+         enough if the App ID exists on your team. -->
+    <!-- <CodesignProvision>iOS Team Provisioning Profile: com.example.zaffre</CodesignProvision> -->
+
+    <!-- Optional: reverse-DNS bundle id you control. Forks must change this;
+         you cannot sign com.stonygrey.zaffre with a different team. -->
+    <!-- <ApplicationId>com.example.zaffre</ApplicationId> -->
+  </PropertyGroup>
+</Project>

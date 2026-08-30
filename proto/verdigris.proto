@@ -1,0 +1,100 @@
+// Copyright © 2026 Stony Grey LLC.
+// SPDX-License-Identifier: MIT
+// The Verdigris service protocol: single source of truth for both the
+// firmware (nanopb) and the host (Google.Protobuf via Grpc.Tools).
+//
+// Application payloads travel as LINK_TYPE_ENCRYPTED messages after
+// GATT segmentation (documents/ble-framing.md). Schema evolution: never
+// reuse field numbers, only add fields.
+syntax = "proto3";
+
+package verdigris;
+
+option csharp_namespace = "StonyGrey.BlueConnect.Verdigris.Protocol";
+
+enum Status {
+  STATUS_OK = 0;
+  STATUS_UNKNOWN_OP = 1;
+  STATUS_INVALID_ARGUMENT = 2;
+  STATUS_OUT_OF_RANGE = 3;
+  STATUS_INTERNAL = 4;
+  STATUS_BUSY = 5;
+  // The session is not authenticated (no pairing matches the session key),
+  // or the pairing ceremony was not confirmed on the device.
+  STATUS_UNAUTHENTICATED = 6;
+  // The session is authenticated but its privilege tier does not permit
+  // this command.
+  STATUS_PERMISSION_DENIED = 7;
+}
+
+// Privilege tier granted by a pairing ceremony and bound to the client key.
+enum Privilege {
+  PRIVILEGE_LOW = 0;
+  PRIVILEGE_HIGH = 1;
+}
+
+message EchoRequest { bytes payload = 1; }
+message EchoResponse { bytes payload = 1; }
+
+message SqrtRequest { double value = 1; }
+message SqrtResponse { double value = 1; }
+
+message FibRequest { uint32 n = 1; }
+message FibResponse { uint64 value = 1; }
+
+message GetTimeRequest {}
+message SetTimeRequest { int64 unix_millis = 1; }
+message TimeResponse { int64 unix_millis = 1; }
+
+// Sets the serial number NNNN in the advertised "Verdigris NNNN" name
+// (persisted on-device across power cycles).
+message SetSerialNumberRequest { uint32 serial_number = 1; }
+message GetSerialNumberRequest {}
+message NameResponse { string name = 1; }
+
+// LED 1 on the DK is the app-controlled indicator: Get is low privilege,
+// Set is high. (Button 1 still blinks it as a heartbeat while held; release
+// restores the app-set state.)
+message GetLedRequest {}
+message SetLedRequest { bool on = 1; }
+message LedResponse { bool on = 1; }
+
+// Pairing ceremony (only meaningful inside a secure session): the device arms
+// a confirmation window and succeeds once its button is pressed, pinning the
+// session's client key into the requested privilege slot (one pinned client
+// per tier). Unpair clears the caller's own slot.
+message PairRequest { Privilege privilege = 1; }
+message UnpairRequest {}
+message AckResponse {}
+
+message Request {
+  uint32 id = 1;
+  oneof op {
+    EchoRequest echo = 2;
+    SqrtRequest sqrt = 3;
+    FibRequest fib = 4;
+    GetTimeRequest get_time = 5;
+    SetTimeRequest set_time = 6;
+    SetSerialNumberRequest set_serial_number = 7;
+    PairRequest pair = 8;
+    UnpairRequest unpair = 9;
+    GetSerialNumberRequest get_serial_number = 10;
+    GetLedRequest get_led = 11;
+    SetLedRequest set_led = 12;
+  }
+}
+
+message Response {
+  uint32 id = 1;
+  Status status = 2;
+  string detail = 3;
+  oneof result {
+    EchoResponse echo = 4;
+    SqrtResponse sqrt = 5;
+    FibResponse fib = 6;
+    TimeResponse time = 7;
+    NameResponse name = 8;
+    AckResponse ack = 9;
+    LedResponse led = 10;
+  }
+}

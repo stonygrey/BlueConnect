@@ -1,0 +1,118 @@
+.cursor-pointer {
+    cursor: pointer;
+}
+
+#blazor-error-ui {
+    color-scheme: light only;
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+.status-bar-safe-area {
+    display: none;
+}
+
+/* Keep the fixed app bar and page content clear of the notch/Dynamic Island. */
+.mud-appbar {
+    padding-top: env(safe-area-inset-top);
+}
+
+/* Pairing is a ceremony, not a Verdigris command — light wash, no command-blue rail. */
+.mud-card.pairing-card {
+    background-color: #eef2ff;
+}
+
+.mud-main-content {
+    padding-top: calc(var(--mud-appbar-height) + env(safe-area-inset-top)) !important;
+    /* Keep the last card clear of rounded display corners / home indicator. */
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* LED 1 card: a physical-looking indicator that mirrors the board. */
+.vg-led-housing {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    padding: 12px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #1f2633, #0f141c);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.vg-led-icon {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 26px;
+}
+
+.vg-led {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease, transform 0.1s ease;
+}
+
+.vg-led:active {
+    transform: scale(0.94);
+}
+
+.vg-led.busy {
+    cursor: progress;
+    opacity: 0.8;
+}
+
+.vg-led.unknown {
+    background: radial-gradient(circle at 35% 35%, #4a5568, #2d3748 70%);
+    border-style: dashed;
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.vg-led.off {
+    background: radial-gradient(circle at 35% 35%, #4f7a55, #23402a 70%);
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.6);
+}
+
+.vg-led.on {
+    background: radial-gradient(circle at 35% 35%, #e6ffe9, #39e07a 40%, #11a34b 78%);
+    border-color: rgba(230, 255, 233, 0.6);
+    box-shadow: 0 0 12px 4px rgba(57, 224, 122, 0.8), 0 0 36px 12px rgba(57, 224, 122, 0.35);
+    animation: vg-led-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes vg-led-breathe {
+    0%, 100% { box-shadow: 0 0 12px 4px rgba(57, 224, 122, 0.8), 0 0 36px 12px rgba(57, 224, 122, 0.35); }
+    50%      { box-shadow: 0 0 16px 6px rgba(57, 224, 122, 0.95), 0 0 52px 16px rgba(57, 224, 122, 0.5); }
+}
+
+/* Bottom-anchored snackbars stay above the home indicator. */
+.mud-snackbar-location-bottom-center {
+    position: fixed !important;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* Pair / Provision method buttons share a width so the column reads as a
+   deliberate pair. */
+.vg-method-btn {
+    min-width: 140px;
+}

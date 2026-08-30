@@ -1,0 +1,119 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFrameworks>net10.0-ios;net10.0-android;net10.0-maccatalyst</TargetFrameworks>
+        <!-- The Windows head can only be built on Windows. -->
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+
+        <OutputType>Exe</OutputType>
+        <RootNamespace>Zaffre</RootNamespace>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <EnableDefaultCssItems>false</EnableDefaultCssItems>
+        <Nullable>enable</Nullable>
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+
+        <!-- Display name -->
+        <ApplicationTitle>Zaffre</ApplicationTitle>
+
+        <!-- App Identifier. Forks override ApplicationId in
+             Directory.Build.local.props (see the .example next to this project). -->
+        <ApplicationId>com.stonygrey.zaffre</ApplicationId>
+
+        <!-- Versions -->
+        <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+        <ApplicationVersion>1</ApplicationVersion>
+
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">26.0</SupportedOSPlatformVersion>
+        <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.19041.0</SupportedOSPlatformVersion>
+        <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.19041.0</TargetPlatformMinVersion>
+        <WindowsPackageType>None</WindowsPackageType>
+
+        <!-- Apple team ID and optional identity live in the gitignored
+             Directory.Build.local.props (see the .example). Without a team,
+             iOS device and Catalyst builds cannot be signed. A stable
+             identity keeps the macOS Bluetooth TCC grant across rebuilds;
+             ad-hoc signing re-prompts every build. -->
+        <CodesignKey Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' AND '$(CodesignKey)' == ''">Apple Development</CodesignKey>
+        <CodesignEntitlements Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">Platforms/MacCatalyst/Entitlements.plist</CodesignEntitlements>
+        <!-- Local Catalyst builds sign sandbox + Keychain entitlements without a
+             Mac Catalyst provisioning profile. Device iOS still uses a profile. -->
+        <CodesignRequireProvisioningProfile Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">false</CodesignRequireProvisioningProfile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- App Icon. Android's adaptive-icon mask crops the foreground to a
+             center circle (only ~61% of the canvas is safe), so the artwork is
+             scaled down there; other platforms show the full canvas. -->
+        <MauiIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'"
+                  Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg"
+                  ForegroundScale="0.5" Color="#0014A8" />
+        <MauiIcon Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) != 'android'"
+                  Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg"
+                  Color="#0014A8" />
+
+        <!-- Splash Screen -->
+        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0014A8" BaseSize="128,128" />
+
+        <!-- Images -->
+        <MauiImage Include="Resources\Images\*" />
+        <MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />
+
+        <!-- Custom Fonts -->
+        <MauiFont Include="Resources\Fonts\*" />
+
+        <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+
+        <!-- Configuration, loaded as a JSON stream in MauiProgram. Remove the
+             default Content item so MAUI does not try to copy it as a bundle
+             asset (that produces a path-outside-bundle warning). -->
+        <Content Remove="appsettings.json" />
+        <MauiAsset Remove="appsettings.json" />
+        <EmbeddedResource Include="appsettings.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.11" />
+        <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.11" />
+        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
+        <PackageReference Include="MetroLog.Maui" Version="2.1.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="10.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
+        <PackageReference Include="MudBlazor" Version="9.8.0" />
+        <!-- Camera QR scanning for the PAKE tab (ML Kit / Vision under the
+             hood). Windows has the TFM but no scanner backend yet; the PAKE
+             tab's manual entry is the fallback there. -->
+        <PackageReference Include="BarcodeScanning.Native.Maui" Version="3.1.0" />
+        <PackageReference Include="System.Reactive" Version="7.0.0" />
+        <PackageReference Include="ReactiveUI.Blazor.Reactive" Version="24.1.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="StonyGrey.Logging" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\StonyGrey\Shared\StonyGrey.Shared.csproj" />
+        <ProjectReference Include="..\StonyGrey\BlueConnect\Abstractions\BlueConnect.Abstractions.csproj" />
+        <ProjectReference Include="..\StonyGrey\BlueConnect\Core\BlueConnect.Core.csproj" />
+        <ProjectReference Include="..\StonyGrey\BlueConnect\Verdigris\BlueConnect.Verdigris.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' Or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+        <ProjectReference Include="..\StonyGrey\BlueConnect\CoreBluetooth\BlueConnect.CoreBluetooth.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+        <ProjectReference Include="..\StonyGrey\BlueConnect\Droid\BlueConnect.Droid.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+        <ProjectReference Include="..\StonyGrey\BlueConnect\WinRT\BlueConnect.WinRT.csproj" />
+    </ItemGroup>
+
+</Project>

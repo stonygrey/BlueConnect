@@ -1,0 +1,8 @@
+# Shell scripts must stay LF: they run in WSL/macOS bash, where CRLF breaks
+# the shebang and every line. Everything else follows core.autocrlf.
+lib/build-firmware text eol=lf
+lib/clean-build text eol=lf
+lib/device text eol=lf
+lib/flash-firmware text eol=lf
+lib/smalt text eol=lf
+lib/zaffre.app text eol=lf

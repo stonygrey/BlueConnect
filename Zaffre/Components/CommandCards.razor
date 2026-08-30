@@ -1,0 +1,106 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@typeparam TViewModel where TViewModel : PrivilegedCommandsViewModel
+@inherits ReactiveComponentBase<TViewModel>
+
+<MudGrid Spacing="3">
+    <MudItem xs="12">
+        <MudCard Outlined="true" Style="border-left: 4px solid #0014A8;">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Serial Number</MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudTextField T="string" @bind-Value="ViewModel!.SerialInput"
+                                  InputMode="InputMode.numeric" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Class="flex-grow-1" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               Disabled="@(!ViewModel!.CanRun)" OnClick="@(() => ClickOnce(GetSerialNumber))">
+                        Read
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                               Disabled="@(!ViewModel!.CanRun)" OnClick="@(() => ClickOnce(SetSerialNumber))">
+                        Write
+                    </MudButton>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudCard Outlined="true" Style="border-left: 4px solid #0014A8;">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">LED 1</MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center" Spacing="5">
+                    <div class="vg-led-housing">
+                        @* The LED is the control: tap to read it if unread, toggle it if known. *@
+                        <div class="@LedClass" role="button" tabindex="0" aria-label="@LedLabel" title="@LedLabel"
+                             @onclick="@(() => ClickOnce(TapLed))">
+                            @if (ViewModel!.LedOn is null)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="vg-led-icon" />
+                            }
+                        </div>
+                    </div>
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Variant="Variant.Filled" Color="Color.Primary"
+                                   Size="Size.Medium" aria-label="Read LED state" title="Read LED state"
+                                   Disabled="@(!ViewModel!.CanRun)" OnClick="@(() => ClickOnce(GetLed))" />
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12">
+        <MudCard Outlined="true" Style="@(ViewModel!.ShowWriteCommands ? "border-left: 4px solid #0014A8;" : "border-left: 4px solid #C62828;")">
+            <MudCardContent>
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Echo</MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudTextField T="string" Label="Payload" @bind-Value="ViewModel!.EchoInput"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="flex-grow-1" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               Disabled="@(!ViewModel!.CanRun)" OnClick="@(() => ClickOnce(Echo))">
+                        Write
+                    </MudButton>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    // One named handler per control: ClickOnce keys its single-flight guard on
+    // the handler method, so each is guarded independently.
+    private Task Echo() => ViewModel!.EchoCommand.Execute().ToTask();
+
+    private Task GetSerialNumber() => ViewModel!.GetSerialNumberCommand.Execute().ToTask();
+
+    private Task SetSerialNumber() => ViewModel!.SetSerialNumberCommand.Execute().ToTask();
+
+    private Task GetLed() => ViewModel!.GetLedCommand.Execute().ToTask();
+
+    // Tapping the LED reads it when its state is unknown and toggles it otherwise.
+    private Task TapLed()
+    {
+        if (!ViewModel!.CanRun)
+        {
+            return Task.CompletedTask;
+        }
+
+        return ViewModel!.LedOn is { } on
+            ? ViewModel!.SetLedCommand.Execute(!on).ToTask()
+            : ViewModel!.GetLedCommand.Execute().ToTask();
+    }
+
+    private string LedClass => (ViewModel!.LedOn switch
+    {
+        true => "vg-led on",
+        false => "vg-led off",
+        null => "vg-led unknown",
+    }) + (ViewModel!.CanRun ? string.Empty : " busy");
+
+    private string LedLabel => ViewModel!.LedOn switch
+    {
+        true => "LED 1 is on. Tap to switch it off",
+        false => "LED 1 is off. Tap to switch it on",
+        null => "LED 1 state not read yet. Tap to read it",
+    };
+
+}

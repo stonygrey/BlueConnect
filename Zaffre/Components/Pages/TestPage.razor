@@ -1,0 +1,68 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@page "/test"
+@inherits ReactiveComponentBase<TestViewModel>
+@inject NavigationManager Navigation
+
+<MudStack Spacing="4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Navigation.NavigateTo("/"))" />
+        <MudText Typo="Typo.h5">@ViewModel!.DeviceName</MudText>
+        @if (ViewModel!.State.IsRunning)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Success">running</MudChip>
+        }
+    </MudStack>
+
+    <TestNav />
+
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Success"
+                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                   Disabled="@(!ViewModel!.CanStart)"
+                   OnClick="@(() => ClickOnce(StartTest))">
+            Start
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Error"
+                   StartIcon="@Icons.Material.Filled.Stop"
+                   Disabled="@(!ViewModel!.CanStop)"
+                   OnClick="@(() => ClickOnce(StopTest))">
+            Stop
+        </MudButton>
+    </MudStack>
+
+    <MudText Typo="Typo.caption">
+        The loop echoes each cycle, which requires the high-privilege pairing.
+    </MudText>
+
+    <MudSimpleTable Dense="true" Hover="true">
+        <tbody>
+            <tr><td>Device</td><td>@ViewModel!.DeviceName</td></tr>
+            <tr><td>Tests</td><td>@ViewModel!.State.TestCount</td></tr>
+            <tr><td>Connection failures</td><td>@ViewModel!.State.ConnectionFailures</td></tr>
+            <tr><td>Command failures</td><td>@ViewModel!.State.CommandFailures</td></tr>
+            <tr><td>Min connect time</td><td>@FormatMs(ViewModel!.State.MinConnectTime)</td></tr>
+            <tr><td>Average connect time</td><td>@FormatMs(ViewModel!.State.AverageConnectTime)</td></tr>
+            <tr><td>Max connect time</td><td>@FormatMs(ViewModel!.State.MaxConnectTime)</td></tr>
+            <tr><td>Started</td><td>@Format(ViewModel!.State.StartTime)</td></tr>
+            <tr><td>Elapsed</td><td>@Format(ViewModel!.State.ElapsedTime)</td></tr>
+        </tbody>
+    </MudSimpleTable>
+</MudStack>
+
+@code {
+    private Task StartTest() => ViewModel!.Start.Execute().ToTask();
+
+    private Task StopTest() => ViewModel!.Stop.Execute().ToTask();
+
+    private static string Format(DateTime value)
+        => value == default ? "—" : value.ToString("HH:mm:ss");
+
+    private static string Format(TimeSpan value)
+        => value == default ? "—" : value.ToString(@"hh\:mm\:ss");
+
+    private static string FormatMs(TimeSpan value)
+        => value == default ? "—" : $"{value.TotalMilliseconds:F0} ms";
+}

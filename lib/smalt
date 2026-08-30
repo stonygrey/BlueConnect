@@ -1,0 +1,10 @@
+#!/bin/bash
+# Copyright © 2026 Stony Grey LLC.
+# SPDX-License-Identifier: MIT
+# Rewrite a Zaffre IO log as color-coded HTML.
+#
+# Usage: lib/smalt <zaffre.log> [--output out.html]
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+dotnet run --project tools/Smalt -- "$@"

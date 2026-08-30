@@ -1,0 +1,20 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@using Zaffre.Services.Abstractions
+@implements IDisposable
+@inject IToasts Toasts
+@inject ISnackbar Snackbar
+
+@code {
+    private IDisposable? _subscription;
+
+    protected override void OnInitialized()
+        => _subscription = Toasts.Subscribe(toast => _ = InvokeAsync(() => Snackbar.Add(toast.Message, toast.Kind switch
+        {
+            ToastKind.Error => Severity.Error,
+            ToastKind.Warning => Severity.Warning,
+            _ => Severity.Info,
+        })));
+
+    public void Dispose() => _subscription?.Dispose();
+}

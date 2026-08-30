@@ -1,0 +1,78 @@
+#!/bin/bash
+# Copyright © 2026 Stony Grey LLC.
+# SPDX-License-Identifier: MIT
+#
+# Cleans the entire build tree: every 'bin' and 'obj' folder under the repo
+# (or a given folder), the firmware build directories (firmware/*/build),
+# and the proto copies CMake configure_file drops into each firmware app
+# (firmware/*/src/verdigris.proto{,.options}). Then restores packages.
+#
+# Usage: lib/clean-build [folder] [--hard] [-q|-y]
+#   --hard   also clears all local NuGet caches and deletes the .vs folder
+#   -q, -y   skip the confirmation prompt
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FOLDER="$SCRIPT_DIR/.."
+HARD=0
+QUIET=0
+
+for arg in "$@"; do
+  case "$arg" in
+    --hard) HARD=1 ;;
+    -q|-y|--quiet) QUIET=1 ;;
+    -*) echo "Unknown option: $arg" >&2; exit 1 ;;
+    *) FOLDER="$arg" ;;
+  esac
+done
+
+if [[ ! -d "$FOLDER" ]]; then
+  echo "$FOLDER does not exist!" >&2
+  exit 1
+fi
+FOLDER="$(cd "$FOLDER" && pwd)"
+
+if [[ $QUIET -eq 0 ]]; then
+  read -r -p "Are you sure you want to delete every build output ('bin', 'obj', firmware builds) in '$FOLDER'? (y/n) " confirmation
+  if [[ "$confirmation" != "y" ]]; then
+    echo "Operation cancelled."
+    exit 2
+  fi
+fi
+
+find "$FOLDER" -name .git -prune -o -type d \( -name bin -o -name obj \) -prune -print | while read -r dir; do
+  rm -rf "$dir"
+  echo "Deleted folder: $dir"
+done
+
+# Firmware: west/CMake build trees, and the configure_file proto copies
+# (gitignored; regenerated from proto/ at the next configure).
+for dir in "$FOLDER"/firmware/*/build; do
+  if [[ -d "$dir" ]]; then
+    rm -rf "$dir"
+    echo "Deleted folder: $dir"
+  fi
+done
+for copy in "$FOLDER"/firmware/*/src/verdigris.proto "$FOLDER"/firmware/*/src/verdigris.options; do
+  if [[ -f "$copy" ]]; then
+    rm -f "$copy"
+    echo "Deleted file:   $copy"
+  fi
+done
+
+if [[ $HARD -eq 1 ]]; then
+  dotnet nuget locals all --clear
+
+  if [[ -d "$FOLDER/.vs" ]]; then
+    rm -rf "$FOLDER/.vs"
+    echo "Deleted folder: $FOLDER/.vs"
+  fi
+fi
+
+echo "Restoring packages..."
+if ! dotnet restore "$SCRIPT_DIR/../BlueConnect.slnx"; then
+  echo "Restore failed" >&2
+  exit 3
+fi
+
+echo "Operation completed."

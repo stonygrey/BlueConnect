@@ -1,0 +1,23 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@* The transport scheme a device advertises in its manufacturer data.
+   Nothing is rendered until a packet carrying the status byte is seen. *@
+
+@if (Scheme != AuthenticationScheme.Unknown)
+{
+    <MudChip T="string" Size="Size.Small"
+             Color="@(Scheme switch { AuthenticationScheme.Pake => Color.Secondary, AuthenticationScheme.Edhoc => Color.Tertiary, _ => Color.Primary })"
+             Variant="Variant.Outlined"
+             title="@($"Link security advertised by the device: {Label}")">@Label</MudChip>
+}
+
+@code {
+    [Parameter] public AuthenticationScheme Scheme { get; set; }
+
+    private string Label => Scheme switch
+    {
+        AuthenticationScheme.Pake => "PAKE",
+        AuthenticationScheme.Edhoc => "EDHOC",
+        _ => "Noise",
+    };
+}

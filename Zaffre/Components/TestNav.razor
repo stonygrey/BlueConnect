@@ -1,0 +1,37 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@inject NavigationManager Navigation
+
+<MudStack Row="true" Spacing="2" Class="mb-2">
+    @* The three trust schemes share one dropdown; the button carries the
+       current scheme's name when one of their pages is open. *@
+    <MudMenu Label="@(CurrentScheme ?? "Trust")" Color="Color.Primary" Size="Size.Small"
+             Variant="@(CurrentScheme is null ? Variant.Outlined : Variant.Filled)"
+             EndIcon="@Icons.Material.Filled.ArrowDropDown"
+             AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+        <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/noise"))">Noise</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/pake"))">PAKE</MudMenuItem>
+        <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/edhoc"))">EDHOC</MudMenuItem>
+    </MudMenu>
+    <MudButton Variant="@VariantFor("/high")" Color="Color.Primary" Size="Size.Small"
+               OnClick="@(() => Navigation.NavigateTo("/high"))">High</MudButton>
+    <MudButton Variant="@VariantFor("/low")" Color="Color.Primary" Size="Size.Small"
+               OnClick="@(() => Navigation.NavigateTo("/low"))">Low</MudButton>
+    <MudButton Variant="@VariantFor("/test")" Color="Color.Primary" Size="Size.Small"
+               OnClick="@(() => Navigation.NavigateTo("/test"))">Loop</MudButton>
+</MudStack>
+
+@code {
+    private string? CurrentScheme => Navigation.Uri switch
+    {
+        var uri when uri.EndsWith("/noise", StringComparison.OrdinalIgnoreCase) => "Noise",
+        var uri when uri.EndsWith("/pake", StringComparison.OrdinalIgnoreCase) => "PAKE",
+        var uri when uri.EndsWith("/edhoc", StringComparison.OrdinalIgnoreCase) => "EDHOC",
+        _ => null,
+    };
+
+    private Variant VariantFor(string route)
+        => Navigation.Uri.EndsWith(route, StringComparison.OrdinalIgnoreCase)
+            ? Variant.Filled
+            : Variant.Outlined;
+}

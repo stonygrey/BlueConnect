@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <!-- See https://aka.ms/maui-publish-app-store#add-entitlements for more information about adding entitlements.-->
+    <dict>
+        <!-- Unsandboxed local debug. keychain-access-groups without a Mac
+             Catalyst provisioning profile is rejected at launch (POSIX 163);
+             pairing therefore uses Preferences (see PairingStore). Re-enable
+             sandbox + bluetooth + keychain-access-groups when a profile exists. -->
+    </dict>
+</plist>
+
