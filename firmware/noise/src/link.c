@@ -360,13 +360,19 @@ static bool accept_xx_payload(const uint8_t *payload, size_t len,
 		return true;
 	}
 
-	if (!have_ca_root) {
-		return false;
-	}
-
 	if (len != ENDORSEMENT_LEN || payload[0] != ENDORSEMENT_VERSION) {
 		LOG_WRN("Handshake payload is not dummy and not a cert; aborting");
 		return false;
+	}
+
+	/* No root to verify against: tolerate a well-formed cert so clients
+	 * that carry one can still talk to a rootless (e.g. freshly wiped)
+	 * device. The session is simply not endorsed — no privilege either way.
+	 */
+	if (!have_ca_root) {
+		session.endorsed = false;
+		LOG_INF("Client sent an endorsement but no CA root is loaded; ignoring it");
+		return true;
 	}
 
 	if (!endorsement_verify(payload, rs)) {

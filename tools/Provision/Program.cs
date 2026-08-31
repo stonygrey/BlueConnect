@@ -20,6 +20,7 @@ return args switch
     ["confirm", .. var rest] => Serial("vg confirm", OptionValue(rest, "--port")),
     ["wipe", .. var rest] => Serial("vg wipe", OptionValue(rest, "--port")),
     ["console", .. var rest] => Console_(OptionValue(rest, "--port"), OptionValue(rest, "--seconds")),
+    ["shell", var cmd, .. var rest] => Serial(cmd, OptionValue(rest, "--port")),
     ["self-test"] => SelfTest.Run(),
     ["interop"] => InteropTest.Run(),
     ["pake-self-test"] => PakeSelfTest.Run(),

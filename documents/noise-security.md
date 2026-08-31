@@ -211,7 +211,7 @@ privilege.
 | Device root | App payload | Result |
 |-------------|-------------|--------|
 | none | `0x5A` | handshake as today |
-| none | cert blob | rejected (today's payload is `0x5A` only) |
+| none | well-formed cert blob | handshake OK; cert ignored, session **not** endorsed — a wiped (rootless) device stays reachable for clients that carry a cert |
 | loaded | `0x5A` / missing cert | handshake as today — missing cert is **not** a failure |
 | loaded | valid cert, subject = proven XX initiator static | handshake OK; session marked *endorsed* |
 | loaded | cert that fails signature or subject binding | **fail closed** — abort handshake |
