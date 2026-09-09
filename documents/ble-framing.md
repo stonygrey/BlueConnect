@@ -275,8 +275,8 @@ clean failure of one message, not a poisoned stream.
 
 This is not an application protocol. No type byte, channel, transaction
 id, or checksum lives here. Those sit in the buffer the caller
-supplies (e.g. the Noise/PAKE type byte in `SecureLink` /
-`PakeLink`).
+supplies (e.g. the handshake type byte — Noise `0x01`, PAKE `0x03`,
+EDHOC `0x04` — in `SecureLink`, `PakeLink`, and `EdhocLink`).
 
 This is not a UART sentinel codec. BLE already framed the ATT value.
 A delimiter-byte scheme concatenates two messages when the byte that

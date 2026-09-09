@@ -17,17 +17,20 @@ button ceremony.
 | `src/cred_ui.c` | Slot LEDs, clear-hold button, `vg info\|keygen\|cred\|set\|confirm\|clear\|wipe` shell | `lib/device edhoc-provision` |
 | `src/main.c` | App-init shim for the shared chassis | — |
 
-`edhoc.c` drives PSA crypto (Oberon software driver): P-256 ECDH via
-`psa_raw_key_agreement`, SHA-256/HMAC, AES-CCM with the suite's 8-byte
+`edhoc.c` drives PSA Crypto: P-256 ECDH via `psa_raw_key_agreement`, SHA-256/HMAC, AES-CCM with the suite's 8-byte
 tag, and AES-256-GCM for the transport. HKDF-Expand (EDHOC_KDF) is the
 plain RFC 5869 HMAC loop. CBOR is a small strict hand-rolled subset —
 the message shapes are tiny and fixed. The C# library conforms to the
 RFC 9529 trace-2 vectors; those vectors are the interop baseline.
 
-Two Oberon behaviors are probed loudly at boot (watch RTT on first
+Two PSA behaviors are probed loudly at boot (watch the console on first
 flash): AES-CCM with `PSA_ALG_AEAD_WITH_SHORTENED_TAG(CCM, 8)`, and
-compressed-point (`0x02 ‖ x`) peer keys in `psa_raw_key_agreement`
-(EDHOC's G_X arrives x-only).
+x-only peer keys (EDHOC's G_X arrives as `0x02 ‖ x`). PSA's Weierstrass
+import takes only uncompressed points, so `ecdh_x` decompresses through
+ocrypto (`ocrypto_curve_p256_from32bytes`) before
+`psa_raw_key_agreement`; that library is linked explicitly
+(`CONFIG_NRF_OBERON`, `nrfxlib_crypto`) so the call exists whichever
+PSA driver the board uses.
 
 The device generates its own key pair at first boot (`ek/key`) and
 persists its credential verbatim (`ek/cred`). Per-tier initiator

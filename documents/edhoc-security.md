@@ -198,8 +198,7 @@ RATE_LIMITED the backoff window. The host maps each to a distinct
   session secrets but the device private key lives in flash
   (`ek/key`) unencrypted — APPROTECT hardening is the same open
   roadmap item as for the other images.
-- Side channels: P-256 and CCM run in Oberon's constant-time software
-  driver on-device; the host uses pure-managed BouncyCastle, whose
+- Side channels: P-256 and CCM run in the board's PSA driver on-device; the host uses pure-managed BouncyCastle, whose
   posture is best-effort.
 
 ## References

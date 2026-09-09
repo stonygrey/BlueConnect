@@ -162,6 +162,20 @@ for 5 s is the factory wipe (LED2+LED3 salute). The nRF52840-DK
 prints the same physical controls one higher (Buttons 1-4, LED1-4),
 so add one to each number on that kit.
 
+All three images do their cryptography through the PSA Crypto API
+(Arm's specification; `#include <psa/crypto.h>`) as shipped in Nordic's
+nrf_security: key agreement, AEAD, hashing, PAKE, and signature
+verification are all `psa_*` calls. Which driver answers is a
+build-time property of the board — the nRF54L15 routes to its CRACEN
+hardware engine, the nRF52840 to the Oberon software driver with the
+CryptoCell TRNG. The firmware never names a driver and neither do the
+other documents: "PSA" there means whichever driver the board selected.
+The one exception is `ecdh_x` in the EDHOC image, which calls the
+`ocrypto` P-256 point decompression directly because PSA imports only
+uncompressed points; that library is linked explicitly
+(`CONFIG_NRF_OBERON`, `nrfxlib_crypto`) so the call exists on every
+board.
+
 nanopb ships inside the nRF Connect SDK as a Zephyr module — no
 separate install. Layout:
 [firmware/noise/README.md](../firmware/noise/README.md),

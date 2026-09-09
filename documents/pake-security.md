@@ -4,8 +4,9 @@
 
 This document describes how a Zaffre app and a device running the PAKE
 firmware (`firmware/pake/`) establish an encrypted, mutually
-authenticated link from a printed setup code. This is the sibling of
-[noise-security.md](noise-security.md): the same Verdigris GATT service,
+authenticated link from a printed setup code. This is a sibling of
+[noise-security.md](noise-security.md) and
+[edhoc-security.md](edhoc-security.md): the same Verdigris GATT service,
 segmentation, and command protocol, with the Noise XX + button-ceremony
 transport replaced by **SPAKE2+**
 ([RFC 9383](https://www.rfc-editor.org/rfc/rfc9383),
@@ -112,7 +113,7 @@ any code holder remotely lock out provisioned access, so rotation is
 | Device flash dump | Yields `w0 ‖ L`: enough to impersonate the device to a phone and to run an offline dictionary attack on the 80-bit code, but not to impersonate a client to another device. Readout protection (APPROTECT) is the production answer, as with the Noise identity. |
 | Phone compromise | Yields the stored code (SecureStorage) — full access at that tier. Same exposure class as the Noise identity key. |
 | QR photographed | The code is the credential and stays valid for the device's life: custody of the label is the procedural control. Re-provision (`pake-provision` overwrites the slot) to rotate. |
-| Wrong firmware for the tab | Handshake frame dropped → timeout; no downgrade path exists because neither image contains the other transport. |
+| Wrong firmware for the tab | Handshake frame dropped → timeout; no downgrade path exists because no image contains another image's transport. |
 
 There is no pairing window and no button that trusts whoever is
 connected. Authentication is cryptographic on both ends of first
@@ -122,7 +123,7 @@ contact.
 
 | Concern | Host | Firmware |
 |---|---|---|
-| SPAKE2+ (RFC 9383) | [`StonyGrey/Spake2Plus`](../StonyGrey/Spake2Plus) (BouncyCastle P-256; RFC vectors in `tests/Spake2Plus.Tests`) | PSA PAKE API (Oberon driver), driven by `firmware/pake/src/pake.c` |
+| SPAKE2+ (RFC 9383) | [`StonyGrey/Spake2Plus`](../StonyGrey/Spake2Plus) (BouncyCastle P-256; RFC vectors in `tests/Spake2Plus.Tests`) | PSA PAKE API, driven by `firmware/pake/src/pake.c` |
 | Link + transport | `Secure/PakeLink.cs` | `firmware/pake/src/pake.c` |
 | Profile constants | `StonyGrey/Spake2Plus/BlueConnectPake.cs` | `CONTEXT`/`TRANSPORT_INFO` in `pake.c` |
 | Provisioning | `tools/Provision/PakeProvision.cs` (`lib/device pake-provision`) | `pk` shell in `firmware/pake/src/prov_ui.c` |

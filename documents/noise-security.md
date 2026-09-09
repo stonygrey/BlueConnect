@@ -4,9 +4,10 @@
 
 This document describes how a Zaffre app and a device running the Noise
 firmware (`firmware/noise/`) establish an encrypted, mutually
-authenticated link over BLE. The sibling PAKE firmware secures the same
-Verdigris service from a printed setup code instead — see
-[pake-security.md](pake-security.md).
+authenticated link over BLE. Two sibling images secure the same
+Verdigris service differently: PAKE from a printed setup code
+([pake-security.md](pake-security.md)) and EDHOC from static P-256
+credentials ([edhoc-security.md](edhoc-security.md)).
 
 Each side owns a long-term X25519 key pair (its *identity*). Pairing is
 *mutual key pinning*: both sides run a
@@ -46,13 +47,13 @@ encrypted.
 flowchart TB
     subgraph app["Zaffre app (initiator)"]
         A1["Verdigris commands<br/>(protobuf request / response)"]
-        A2["SecureLink<br/>(Noise XX + AES-GCM)"]
+        A2["SecureLink<br/>(Noise XX/IK + AES-GCM)"]
         A3["SegmentLink<br/>one-byte header + data"]
         A4["IPeripheral<br/>platform BLE backend"]
     end
     subgraph dev["Verdigris device (responder)"]
         D1["Command dispatcher<br/>(nanopb request / response)"]
-        D2["link.c<br/>(Noise XX + AES-GCM via PSA)"]
+        D2["link.c<br/>(Noise XX/IK + AES-GCM via PSA)"]
         D3["Segment reassembly<br/>one-byte header + data"]
         D4["Verdigris GATT service<br/>RX write / TX notify"]
     end
@@ -68,7 +69,7 @@ Each ATT value is a segment (one-byte header; see
 
 | Field   | Size    | Meaning                                              |
 |---------|---------|------------------------------------------------------|
-| type    | 1 byte  | `0x00` reserved (rejected) · `0x01` handshake · `0x02` sealed · `0x03` PAKE handshake ([pake-security.md](pake-security.md); this firmware drops it) |
+| type    | 1 byte  | `0x00` reserved (rejected) · `0x01` handshake · `0x02` sealed · `0x03` PAKE handshake ([pake-security.md](pake-security.md)) · `0x04` EDHOC handshake ([edhoc-security.md](edhoc-security.md)) — this firmware drops both |
 | payload | n bytes | handshake message or ciphertext                      |
 
 Application payloads travel only as `0x02`. A `0x00` type is dropped in
@@ -79,7 +80,7 @@ every pairing state.
 | Party  | Key                  | Generated                                   | Stored                                          |
 |--------|----------------------|---------------------------------------------|-------------------------------------------------|
 | App    | X25519 static pair   | first launch                                | iOS/Android: Keychain / EncryptedSharedPreferences. Mac Catalyst: `Preferences` — the iOS Keychain stack wants `keychain-access-groups` backed by a Mac Catalyst provisioning profile; without one, launchd refuses the app (POSIX 163). |
-| Device | X25519 static pair   | first secure use, CryptoCell TRNG on-chip   | settings flash (`vg/sk`); never leaves the device |
+| Device | X25519 static pair   | first secure use, the SoC's TRNG via PSA   | settings flash (`vg/sk`); never leaves the device |
 
 The public key *is* the identity. After pairing, each side also stores a
 **pin** — the peer's public key.
@@ -100,7 +101,7 @@ key in no slot may only `Pair` (`STATUS_UNAUTHENTICATED`); an
 under-privileged command gets `STATUS_PERMISSION_DENIED`. A second
 client takes over a slot the same way as the first: `Pair` + the
 matching button. `Unpair` clears the caller's own slot; holding Button
-4 for 5 s and `vg clear` clear both without a new client; Buttons
+3 for 5 s and `vg clear` clear both without a new client; Buttons
 2+3 held 5 s (or `vg wipe`) also rotate the device identity. The app
 keeps one link identity per tier so both can be demonstrated from a
 single install.
@@ -111,7 +112,7 @@ single install.
 stateDiagram-v2
     direction LR
     Unpaired: Unpaired — encrypted sessions,<br/>any handshake accepted,<br/>Pair is the only command served
-    Window: Pairing window — 30 s<br/>LED3+BTN3 low · LED4+BTN4 high
+    Window: Pairing window — 30 s<br/>LED2+BTN2 low · LED3+BTN3 high
     Paired: Paired — encrypted sessions,<br/>commands require the pinned key
 
     [*] --> Unpaired
@@ -119,16 +120,17 @@ stateDiagram-v2
     Paired --> Window: another client sends Pair
     Window --> Paired: matching button<br/>(occupant replaced if a new key)
     Window --> Unpaired: timeout or privilege mismatch<br/>— pin unchanged
-    Paired --> Unpaired: Unpair command,<br/>BUTTON4 held 5 s,<br/>or vg clear on serial
+    Paired --> Unpaired: Unpair command,<br/>BUTTON3 held 5 s,<br/>or vg clear on serial
 ```
 
 The device also advertises its state (manufacturer data status byte:
-bit 0 = low slot pinned, bit 1 = high slot pinned, bit 2 = transport
-scheme — set for SPAKE2+, clear for this firmware's Noise XX), surfaced
-in the app as `IAdvertisement.IsSecured` and
-`IAdvertisement.AuthenticationScheme`. That is how the scan list shows
-the padlock and the Noise/PAKE chip, and how state mismatches are
-detected before connecting. The advertisement is an unauthenticated
+bit 0 = low slot pinned, bit 1 = high slot pinned, bits 2-3 = a two-bit
+scheme field — 00 for this firmware's Noise, 01 for SPAKE2+, 10 for
+EDHOC; 11 is reserved and decodes as unknown), surfaced in the app as
+`IAdvertisement.IsSecured` and `IAdvertisement.AuthenticationScheme`.
+That is how the scan list shows the padlock and the scheme chip (Noise,
+PAKE, or EDHOC), and how state mismatches are detected before
+connecting. The advertisement is an unauthenticated
 hint for UX only; enforcement never depends on it.
 
 ## Handshake
@@ -232,7 +234,7 @@ offset  size  field
     33    64  Ed25519 signature (PURE_EDDSA) over version || subject
 ```
 
-The CA is Ed25519. Oberon PSA already in the Noise image verifies
+The CA is Ed25519. PSA, already in the Noise image, verifies
 `PSA_ALG_PURE_EDDSA`; this does not pull in the EDHOC stack. The CA
 private key is tool-only (`lib/noise-ca.key`, gitignored) — never
 firmware, never Zaffre. The root *public* key may live at
@@ -362,7 +364,7 @@ established session drops the session (it is not a rekey).
 | Identity + pin storage | `Zaffre/Services/NoiseCredentialService.cs` | settings flash (`vg/sk`, `vg/pin_lo`, `vg/pin_hi`) |
 | Client endorsement | `Secure/ClientEndorsement.cs` + XX message 3 | Ed25519 verify of compact blob; root in `vg/ca_root` |
 | Pairing ceremony | `Zaffre/ViewModels/PrivilegedCommandsViewModel.cs` | `pairing_ui.c` + `link_pair` |
-| Crypto primitives | BCL AES-GCM/SHA-256/HMAC, BouncyCastle X25519 + Ed25519 | Oberon PSA Crypto (CryptoCell TRNG; Ed25519 verify in software) |
+| Crypto primitives | BCL AES-GCM/SHA-256/HMAC, BouncyCastle X25519 + Ed25519 | PSA Crypto (`psa/crypto.h`) with the SoC's TRNG |
 | Loopback self-test | `tools/Provision/SelfTest.cs` (`lib/device self-test`) | — |
 
 The protocol (Noise XX) is [formally verified](https://noiseexplorer.com);
