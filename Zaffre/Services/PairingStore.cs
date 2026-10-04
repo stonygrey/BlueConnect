@@ -9,25 +9,60 @@ namespace Zaffre.Services;
 /// <c>keychain-access-groups</c> backed by a Mac Catalyst provisioning
 /// profile; without one launchd refuses the app (POSIX 163). Preferences
 /// is the local-dev stand-in until that profile exists.
+///
+/// On iOS every item is stored "after first unlock, this device only".
+/// MAUI's default accessibility lets Keychain items travel in an encrypted
+/// backup or a phone-to-phone transfer, which would hand a paired identity
+/// (private key and pin) to a new phone without the pairing ceremony. Items
+/// written before this rule are re-saved with it the first time they are read.
+///
+/// The rule covers all three schemes, because every credential service
+/// stores through this class: the Noise identities and pins, the EDHOC
+/// initiator private key and device CCS, and the PAKE setup code. Each
+/// would otherwise carry its tier to a new phone in the same way.
 /// </summary>
 internal static class PairingStore
 {
-    public static Task<string?> GetAsync(string key)
+#if IOS && !MACCATALYST
+    /// <summary>Preferences flag per key: the Keychain item already carries the this-device-only rule.</summary>
+    private const string LocalOnlyFlagPrefix = "zaffre.keychain.local.";
+
+    static PairingStore()
+        => SecureStorage.DefaultAccessible = Security.SecAccessible.AfterFirstUnlockThisDeviceOnly;
+#endif
+
+    public static async Task<string?> GetAsync(string key)
     {
 #if MACCATALYST
-        return Task.FromResult(Preferences.Default.Get<string?>(key, null));
+        return await Task.FromResult(Preferences.Default.Get<string?>(key, null)).ConfigureAwait(false);
 #else
-        return SecureStorage.Default.GetAsync(key);
+        var value = await SecureStorage.Default.GetAsync(key).ConfigureAwait(false);
+#if IOS
+        if (value is not null && !Preferences.Default.Get(LocalOnlyFlagPrefix + key, false))
+        {
+            // SetAsync removes the existing record and adds a new one with
+            // the current DefaultAccessible, which converts a migratable item.
+            await SecureStorage.Default.SetAsync(key, value).ConfigureAwait(false);
+            Preferences.Default.Set(LocalOnlyFlagPrefix + key, true);
+#if DEBUG
+            Console.WriteLine($"ZAFFRE-KEYCHAIN: re-saved '{key}' as this-device-only");
+#endif
+        }
+#endif
+        return value;
 #endif
     }
 
-    public static Task SetAsync(string key, string value)
+    public static async Task SetAsync(string key, string value)
     {
 #if MACCATALYST
         Preferences.Default.Set(key, value);
-        return Task.CompletedTask;
+        await Task.CompletedTask.ConfigureAwait(false);
 #else
-        return SecureStorage.Default.SetAsync(key, value);
+        await SecureStorage.Default.SetAsync(key, value).ConfigureAwait(false);
+#if IOS
+        Preferences.Default.Set(LocalOnlyFlagPrefix + key, true);
+#endif
 #endif
     }
 
@@ -37,6 +72,9 @@ internal static class PairingStore
         Preferences.Default.Remove(key);
 #else
         SecureStorage.Default.Remove(key);
+#if IOS
+        Preferences.Default.Remove(LocalOnlyFlagPrefix + key);
+#endif
 #endif
     }
 }

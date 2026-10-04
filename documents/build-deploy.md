@@ -18,6 +18,18 @@ Install the .NET SDK (10.0.301) from
 dotnet workload install maui ios
 ```
 
+On an Apple silicon Mac the build also needs Rosetta 2. The Verdigris
+project compiles `proto/verdigris.proto` with the `protoc` that ships in
+the Grpc.Tools package, and that package carries only an Intel (x64)
+`protoc` for macOS. Rosetta is not part of a default macOS install (it
+was absent on the development Mac after the upgrade to macOS 27);
+without it the build stops with `Bad CPU type in executable` from
+`Google.Protobuf.Tools.targets`. Install it once:
+
+```bash
+softwareupdate --install-rosetta --agree-to-license
+```
+
 ## Android
 
 Install Android Studio. It provides the SDK manager and a bundled JDK;
@@ -201,6 +213,13 @@ Scan the QR (or type the code) on Zaffre's PAKE tab.
 dotnet build Zaffre/Zaffre.csproj -f net10.0-ios -t:Rebuild -p:RuntimeIdentifier=ios-arm64
 xcrun devicectl device install app --device <DEVICE-ID> Zaffre/bin/Debug/net10.0-ios/ios-arm64/Zaffre.app
 xcrun devicectl device process launch --device <DEVICE-ID> <ApplicationId>
+
+# On a Mac whose Xcode is newer than the installed .NET for iOS workload
+# expects (e.g. Xcode 27.0 with workload 26.5, which wants Xcode 26.6), add
+# -p:ValidateXcodeVersion=false to the iOS build until the workload catches up.
+# A phone added after the provisioning profile was created needs the profile
+# regenerated: rebuild the Xcode stub (see Apple signing) with
+# -destination 'id=<DEVICE-UDID>' -allowProvisioningUpdates.
 
 # iOS simulator (no Bluetooth — a simulated scanner/peripheral pair is
 # auto-registered on virtual devices so the full UI flow still works)
