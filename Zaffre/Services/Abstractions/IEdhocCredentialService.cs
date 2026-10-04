@@ -7,9 +7,8 @@ using StonyGrey.Shared.Services.Abstractions;
 
 namespace Zaffre.Services.Abstractions;
 
-/// <summary>Origin is "paired" (ceremony) or "provisioned" (QR); null when
-/// stored before origins were recorded (treated as paired).</summary>
-public sealed record EdhocCredentialState(bool HasCredential, string? DeviceName, string? Origin = null);
+/// <summary>A role's credential state; <see cref="Origin"/> is meaningful only when a credential is held.</summary>
+public sealed record EdhocCredentialState(bool HasCredential, string? DeviceName, CredentialOrigin Origin = CredentialOrigin.Paired);
 
 /// <summary>Both roles' EDHOC credential states, published as one snapshot.</summary>
 public sealed record EdhocCredentials(EdhocCredentialState Low, EdhocCredentialState High)
@@ -43,7 +42,7 @@ public interface IEdhocCredentialService : IObservableService<EdhocCredentials>
     Task<EdhocSecurity> GetLinkSecurity(PairingRole role, CancellationToken cancellationToken = default);
 
     /// <summary>Validates and stores a scanned or pasted SGEK1 payload.</summary>
-    Task StorePayload(PairingRole role, EdhocQrPayload payload, string origin = "provisioned", CancellationToken cancellationToken = default);
+    Task StorePayload(PairingRole role, EdhocQrPayload payload, CredentialOrigin origin = CredentialOrigin.Provisioned, CancellationToken cancellationToken = default);
 
     /// <summary>Forgets the role's credential locally (the device is untouched).</summary>
     Task Clear(PairingRole role);

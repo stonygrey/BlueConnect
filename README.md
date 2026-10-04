@@ -27,8 +27,11 @@ only in how a session is authenticated:
   window; Button 2 / LED 2 is low privilege, Button 3 / LED 3 is high
   (nRF54L15-DK silkscreen). Each side pins the other's X25519 public
   key; a tier can instead be provisioned over USB (`lib/device
-  noise-provision`), which locks it against re-pairing. A client in no
-  slot is served exactly one command: `Pair`.
+  noise-provision`), which locks it against re-pairing, or the low tier
+  can be *enrolled* from a QR (`lib/device noise-provision enroll`).
+  Enrollment via QR ensures a single client is authorized at any given
+  time while avoiding the need to interact with the DK.
+  A client in no slot is served exactly one command: `Pair`.
 - **PAKE** (`firmware/pake/`): SPAKE2+ (RFC 9383, P256-SHA256) from a
   printed setup code per tier. The device stores only the verifier
   `w0 ‖ L`, written over USB by `lib/device pake-provision`. Knowing the

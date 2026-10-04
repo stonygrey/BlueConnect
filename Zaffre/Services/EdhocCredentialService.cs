@@ -112,11 +112,11 @@ public sealed class EdhocCredentialService : ObservableService<EdhocCredentials>
             role == PairingRole.High ? PakeTier.High : PakeTier.Low,
             privateKey, deviceCcs,
             advertisement.LocalName is { Length: > 0 } ? advertisement.LocalName : null);
-        await StorePayload(role, payload, "paired", cancellationToken).ConfigureAwait(false);
+        await StorePayload(role, payload, CredentialOrigin.Paired, cancellationToken).ConfigureAwait(false);
         _logger.Here().LogInformation("Paired ({Role}) with '{Device}' over EDHOC enrollment.", role, advertisement.LocalName);
     }
 
-    public async Task StorePayload(PairingRole role, EdhocQrPayload payload, string origin = "provisioned", CancellationToken cancellationToken = default)
+    public async Task StorePayload(PairingRole role, EdhocQrPayload payload, CredentialOrigin origin = CredentialOrigin.Provisioned, CancellationToken cancellationToken = default)
     {
         ThrowIfDisposed();
 
@@ -137,7 +137,7 @@ public sealed class EdhocCredentialService : ObservableService<EdhocCredentials>
             {
                 PairingStore.Remove(NameKey(role));
             }
-            await PairingStore.SetAsync(OriginKey(role), origin).ConfigureAwait(false);
+            await PairingStore.SetAsync(OriginKey(role), CredentialOriginStorage.Format(origin)).ConfigureAwait(false);
 
             _logger.Here().LogInformation("Stored the {Role} EDHOC credential.", role);
         }
@@ -180,6 +180,6 @@ public sealed class EdhocCredentialService : ObservableService<EdhocCredentials>
         var payload = await PairingStore.GetAsync(PayloadKey(role)).ConfigureAwait(false);
         var name = await PairingStore.GetAsync(NameKey(role)).ConfigureAwait(false);
         var origin = await PairingStore.GetAsync(OriginKey(role)).ConfigureAwait(false);
-        return new EdhocCredentialState(payload is not null, name, origin);
+        return new EdhocCredentialState(payload is not null, name, CredentialOriginStorage.Parse(origin));
     }
 }

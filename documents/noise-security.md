@@ -23,8 +23,8 @@ length. Either way the app accepts only *exactly* the pinned device
 key, the device resolves the proven client key to a privilege slot
 before serving any command, and all traffic is sealed with AES-256-GCM.
 An optional compact endorsement may ride in XX message 3; it grants no
-privilege by itself — a slot is still earned only through the button
-ceremony or USB provisioning.
+privilege by itself — a slot is written only by the button ceremony or
+by USB provisioning.
 
 Trust is rooted differently on each side. The app pins the device key
 SSH-style (sticky; a changed key is an alarm). The device uses
@@ -132,6 +132,39 @@ That is how the scan list shows the padlock and the scheme chip (Noise,
 PAKE, or EDHOC), and how state mismatches are detected before
 connecting. The advertisement is an unauthenticated
 hint for UX only; enforcement never depends on it.
+
+## Enrollment
+
+Enrollment writes a phone's key into the low slot with nothing pressed on
+the device: a kit card proves possession of the kit, and the phone's own
+key is what is pinned. The device holds a third key beside the two
+slots, the *enrollment key*, written at the factory over the USB shell
+(`lib/device noise-provision enroll`, `vg set en`) and never advertised.
+Its QR (`SGNE1:<base64url blob>[:<NAME>]`, the enrollment private key
+‖ the device public key) is the kit card. Scanning it makes the app open
+a session *as* the enrollment key — IK, since the card also carries the
+device key — and send `Enroll` with the app's own low-tier public key.
+The device pins that key into the low slot, marks the slot `enrolled`,
+and the app pins the device key with origin `enrolled`. The enrollment
+key is used for that one call and is never stored on the phone.
+
+The dispatcher treats a session opened with the enrollment key as its
+own privilege (`LINK_PRIV_ENROLL`), outside the tier ladder: it is served
+exactly one command, `Enroll`, and every other request gets
+`STATUS_PERMISSION_DENIED`; `Enroll` from any other session gets
+`STATUS_UNAUTHENTICATED`. The card therefore grants no access by itself.
+
+One enrolled phone holds the slot at a time. A second phone that scans
+the same card enrolls its own key and replaces the first, whose next
+session is answered `STATUS_UNAUTHENTICATED`. An enrolled slot refuses
+the button ceremony (`PERMISSION_DENIED: slot is locked`), so a button
+press on the device cannot replace the enrolled phone's key; its occupant may `Unpair` it,
+a later `Enroll` replaces it, and USB possession clears it. `Enroll` is
+refused while the low slot is USB-provisioned. The enrollment key itself
+is cleared only by `vg clear en` or the factory wipe (which also rotates
+the device identity, so the card's copy of the device key goes stale).
+The slot's provenance is persisted with the pin (`vg/lock_lo` = 2) and
+`vg info` shows it as `pinned (enrolled)`.
 
 ## Handshake
 
@@ -362,6 +395,7 @@ established session drops the session (it is not a rekey).
 | Noise XX | [Torann](https://www.nuget.org/packages/Torann) (NuGet), driven by `Secure/Links.cs` | `firmware/noise/src/link.c` |
 | Framing | `StonyGrey/BlueConnect/Core/SegmentLink.cs` | `firmware/common/src/segment.c` |
 | Identity + pin storage | `Zaffre/Services/NoiseCredentialService.cs` | settings flash (`vg/sk`, `vg/pin_lo`, `vg/pin_hi`) |
+| Enrollment | `Secure/NoiseEnrollmentPayload.cs`, `NoiseCredentialService.Enroll`, `Enroll` op, `link_enroll` / `LINK_PRIV_ENROLL` | third key `vg/pin_en`; low slot provenance `enrolled` |
 | Client endorsement | `Secure/ClientEndorsement.cs` + XX message 3 | Ed25519 verify of compact blob; root in `vg/ca_root` |
 | Pairing ceremony | `Zaffre/ViewModels/PrivilegedCommandsViewModel.cs` | `pairing_ui.c` + `link_pair` |
 | Crypto primitives | BCL AES-GCM/SHA-256/HMAC, BouncyCastle X25519 + Ed25519 | PSA Crypto (`psa/crypto.h`) with the SoC's TRNG |

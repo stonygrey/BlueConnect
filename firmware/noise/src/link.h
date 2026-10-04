@@ -36,6 +36,16 @@ void link_clear_slot(enum link_privilege privilege);
 bool link_set_pin(enum link_privilege privilege, const uint8_t key[32]);
 bool link_slot_locked(enum link_privilege privilege);
 
+/* How a slot came to be occupied. LINK_PRIV_ENROLL reports USB when the
+ * enrollment key is present (it has no other way in).
+ */
+enum link_provenance {
+	LINK_PROV_NONE = 0,
+	LINK_PROV_USB,
+	LINK_PROV_ENROLLED,
+};
+enum link_provenance link_slot_provenance(enum link_privilege privilege);
+
 /* Rotates the device identity (vg/sk). Refuses when one exists unless
  * force — rotation makes every phone's pinned device key alarm on its next
  * session, which is the TOFU model working as intended.

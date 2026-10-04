@@ -80,11 +80,22 @@ static uint8_t pin_lo[LINK_KEY_LEN];
 static bool have_pin_lo;
 static uint8_t pin_hi[LINK_KEY_LEN];
 static bool have_pin_hi;
-/* USB-provisioned slots are locked: no ceremony may replace or clear them
- * remotely; only USB possession (vg unpair / vg set-pin) touches them.
+/* The factory enrollment key. A session proven with it may only Enroll;
+ * it is written and cleared on the USB shell alone and never advertised.
  */
-static bool lock_lo;
-static bool lock_hi;
+static uint8_t pin_en[LINK_KEY_LEN];
+static bool have_pin_en;
+/* Slot provenance (persisted as one byte). USB-provisioned slots are
+ * locked: no ceremony may replace them and no remote Unpair clears them;
+ * only USB possession touches them. An enrolled slot refuses the ceremony
+ * too (a button press must not displace the enrolled phone) but its own
+ * occupant may Unpair it, and a later Enroll replaces it.
+ */
+#define LOCK_NONE 0
+#define LOCK_USB 1
+#define LOCK_ENROLLED 2
+static uint8_t lock_lo;
+static uint8_t lock_hi;
 /* Optional endorsement CA root (Ed25519 public). Empty = skip cert checks. */
 static uint8_t ca_root[LINK_KEY_LEN];
 static bool have_ca_root;
@@ -549,6 +560,10 @@ enum link_privilege link_privilege(void)
 		return LINK_PRIV_NONE;
 	}
 
+	if (have_pin_en && memcmp(session.remote_static, pin_en, LINK_KEY_LEN) == 0) {
+		return LINK_PRIV_ENROLL;
+	}
+
 	if (have_pin_hi && memcmp(session.remote_static, pin_hi, LINK_KEY_LEN) == 0) {
 		return LINK_PRIV_HIGH;
 	}
@@ -953,9 +968,9 @@ enum link_pair_result link_pair(enum link_privilege privilege)
 		return LINK_PAIR_NO_SESSION;
 	}
 
-	if (high ? lock_hi : lock_lo) {
-		LOG_WRN("Pair(%s) refused: slot is provisioned over USB",
-			high ? "high" : "low");
+	if ((high ? lock_hi : lock_lo) != LOCK_NONE) {
+		LOG_WRN("Pair(%s) refused: slot is %s", high ? "high" : "low",
+			(high ? lock_hi : lock_lo) == LOCK_USB ? "provisioned over USB" : "enrolled");
 		return LINK_PAIR_LOCKED;
 	}
 
@@ -1010,9 +1025,13 @@ enum link_pair_result link_pair(enum link_privilege privilege)
 
 bool link_unpair_slot(enum link_privilege privilege)
 {
-	if ((privilege == LINK_PRIV_HIGH && lock_hi) ||
-	    (privilege == LINK_PRIV_LOW && lock_lo)) {
+	if ((privilege == LINK_PRIV_HIGH && lock_hi == LOCK_USB) ||
+	    (privilege == LINK_PRIV_LOW && lock_lo == LOCK_USB)) {
 		/* USB-provisioned: only USB possession clears it. */
+		return false;
+	}
+	if (privilege == LINK_PRIV_ENROLL) {
+		/* The enrollment key is factory material; never cleared over BLE. */
 		return false;
 	}
 
@@ -1020,10 +1039,18 @@ bool link_unpair_slot(enum link_privilege privilege)
 		have_pin_hi = false;
 		memset(pin_hi, 0, sizeof(pin_hi));
 		store_delete("vg/pin_hi");
+		if (lock_hi != LOCK_NONE) {
+			lock_hi = LOCK_NONE;
+			store_delete("vg/lock_hi");
+		}
 	} else if (privilege == LINK_PRIV_LOW && have_pin_lo) {
 		have_pin_lo = false;
 		memset(pin_lo, 0, sizeof(pin_lo));
 		store_delete("vg/pin_lo");
+		if (lock_lo != LOCK_NONE) {
+			lock_lo = LOCK_NONE;
+			store_delete("vg/lock_lo");
+		}
 	} else {
 		return true; /* nothing pinned: an idempotent no-op */
 	}
@@ -1038,13 +1065,22 @@ void link_clear_slot(enum link_privilege privilege)
 	/* Possession (USB shell or button hold): the lock falls first so the
 	 * slot clear goes through.
 	 */
+	if (privilege == LINK_PRIV_ENROLL) {
+		if (have_pin_en) {
+			have_pin_en = false;
+			memset(pin_en, 0, sizeof(pin_en));
+			store_delete("vg/pin_en");
+			LOG_INF("Enrollment key cleared");
+		}
+		return;
+	}
 	if (privilege == LINK_PRIV_HIGH) {
-		if (lock_hi) {
-			lock_hi = false;
+		if (lock_hi != LOCK_NONE) {
+			lock_hi = LOCK_NONE;
 			store_delete("vg/lock_hi");
 		}
-	} else if (lock_lo) {
-		lock_lo = false;
+	} else if (lock_lo != LOCK_NONE) {
+		lock_lo = LOCK_NONE;
 		store_delete("vg/lock_lo");
 	}
 	link_unpair_slot(privilege);
@@ -1058,31 +1094,83 @@ void link_unpair(void)
 
 bool link_slot_locked(enum link_privilege privilege)
 {
-	return privilege == LINK_PRIV_HIGH ? lock_hi : lock_lo;
+	return link_slot_provenance(privilege) != LINK_PROV_NONE;
+}
+
+enum link_provenance link_slot_provenance(enum link_privilege privilege)
+{
+	uint8_t lock;
+
+	switch (privilege) {
+	case LINK_PRIV_ENROLL:
+		return have_pin_en ? LINK_PROV_USB : LINK_PROV_NONE;
+	case LINK_PRIV_HIGH:
+		lock = lock_hi;
+		break;
+	default:
+		lock = lock_lo;
+		break;
+	}
+	return lock == LOCK_USB ? LINK_PROV_USB
+	     : lock == LOCK_ENROLLED ? LINK_PROV_ENROLLED
+	     : LINK_PROV_NONE;
 }
 
 bool link_set_pin(enum link_privilege privilege, const uint8_t key[LINK_KEY_LEN])
 {
 	bool high = privilege == LINK_PRIV_HIGH;
-	static const uint8_t one = 1;
+	static const uint8_t usb = LOCK_USB;
 
 	if (key_is_zero(key)) {
 		return false;
 	}
 
+	if (privilege == LINK_PRIV_ENROLL) {
+		memcpy(pin_en, key, LINK_KEY_LEN);
+		have_pin_en = true;
+		store_save("vg/pin_en", key, LINK_KEY_LEN);
+		LOG_INF("Provisioned: enrollment key pinned over USB");
+		return true;
+	}
+
 	memcpy(high ? pin_hi : pin_lo, key, LINK_KEY_LEN);
 	if (high) {
 		have_pin_hi = true;
-		lock_hi = true;
+		lock_hi = LOCK_USB;
 	} else {
 		have_pin_lo = true;
-		lock_lo = true;
+		lock_lo = LOCK_USB;
 	}
 	store_save(high ? "vg/pin_hi" : "vg/pin_lo", key, LINK_KEY_LEN);
-	store_save(high ? "vg/lock_hi" : "vg/lock_lo", &one, 1);
+	store_save(high ? "vg/lock_hi" : "vg/lock_lo", &usb, 1);
 	verdigris_set_secured(secured_flags());
 	LOG_INF("Provisioned: client key pinned over USB (%s privilege)",
 		high ? "HIGH" : "low");
+	return true;
+}
+
+bool link_enroll(const uint8_t key[LINK_KEY_LEN])
+{
+	static const uint8_t enrolled = LOCK_ENROLLED;
+
+	if (link_privilege() != LINK_PRIV_ENROLL || key_is_zero(key)) {
+		return false;
+	}
+	if (lock_lo == LOCK_USB) {
+		LOG_WRN("Enroll refused: low slot is provisioned over USB");
+		return false;
+	}
+	if (have_pin_lo && memcmp(pin_lo, key, LINK_KEY_LEN) != 0) {
+		LOG_INF("Enroll: replacing the low slot's occupant");
+	}
+
+	memcpy(pin_lo, key, LINK_KEY_LEN);
+	have_pin_lo = true;
+	lock_lo = LOCK_ENROLLED;
+	store_save("vg/pin_lo", pin_lo, LINK_KEY_LEN);
+	store_save("vg/lock_lo", &enrolled, 1);
+	verdigris_set_secured(secured_flags());
+	LOG_INF("Enrolled: client key pinned (low privilege)");
 	return true;
 }
 
@@ -1138,6 +1226,9 @@ const uint8_t *link_static_public(void)
 
 bool link_has_pin(enum link_privilege privilege)
 {
+	if (privilege == LINK_PRIV_ENROLL) {
+		return have_pin_en;
+	}
 	if (privilege == LINK_PRIV_HIGH) {
 		return have_pin_hi;
 	}
@@ -1149,6 +1240,9 @@ bool link_has_pin(enum link_privilege privilege)
 
 const uint8_t *link_pin(enum link_privilege privilege)
 {
+	if (privilege == LINK_PRIV_ENROLL) {
+		return have_pin_en ? pin_en : NULL;
+	}
 	if (privilege == LINK_PRIV_HIGH && have_pin_hi) {
 		return pin_hi;
 	}
@@ -1209,7 +1303,7 @@ static int store_set(const char *name, size_t len, settings_read_cb read_cb, voi
 		uint8_t v;
 
 		if (read_cb(cb_arg, &v, 1) == 1) {
-			lock_lo = v != 0;
+			lock_lo = v == LOCK_ENROLLED ? LOCK_ENROLLED : v != 0 ? LOCK_USB : LOCK_NONE;
 		}
 		return 0;
 	}
@@ -1218,7 +1312,16 @@ static int store_set(const char *name, size_t len, settings_read_cb read_cb, voi
 		uint8_t v;
 
 		if (read_cb(cb_arg, &v, 1) == 1) {
-			lock_hi = v != 0;
+			lock_hi = v == LOCK_ENROLLED ? LOCK_ENROLLED : v != 0 ? LOCK_USB : LOCK_NONE;
+		}
+		return 0;
+	}
+
+	if (store_leaf(name, "pin_en") && len == LINK_KEY_LEN) {
+		if (read_cb(cb_arg, pin_en, LINK_KEY_LEN) == LINK_KEY_LEN &&
+		    !key_is_zero(pin_en)) {
+			have_pin_en = true;
+			LOG_INF("Restored enrollment key");
 		}
 		return 0;
 	}
@@ -1266,18 +1369,20 @@ static int store_export(int (*cb)(const char *name, const void *val, size_t val_
 			return rc;
 		}
 	}
-	if (lock_lo) {
-		static const uint8_t one = 1;
-
-		rc = cb("vg/lock_lo", &one, 1);
+	if (have_pin_en) {
+		rc = cb("vg/pin_en", pin_en, LINK_KEY_LEN);
 		if (rc) {
 			return rc;
 		}
 	}
-	if (lock_hi) {
-		static const uint8_t one = 1;
-
-		rc = cb("vg/lock_hi", &one, 1);
+	if (lock_lo != LOCK_NONE) {
+		rc = cb("vg/lock_lo", &lock_lo, 1);
+		if (rc) {
+			return rc;
+		}
+	}
+	if (lock_hi != LOCK_NONE) {
+		rc = cb("vg/lock_hi", &lock_hi, 1);
 		if (rc) {
 			return rc;
 		}
@@ -1293,10 +1398,11 @@ static int store_export(int (*cb)(const char *name, const void *val, size_t val_
 
 static int store_commit(void)
 {
-	LOG_INF("Link settings committed; identity=%s lo=%s hi=%s ca=%s",
+	LOG_INF("Link settings committed; identity=%s lo=%s hi=%s en=%s ca=%s",
 		have_identity ? "yes" : "no",
 		have_pin_lo ? "yes" : "no",
 		have_pin_hi ? "yes" : "no",
+		have_pin_en ? "yes" : "no",
 		have_ca_root ? "yes" : "no");
 	return 0;
 }

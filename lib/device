@@ -6,7 +6,7 @@
 # against whichever is flashed (USB access is the possession proof). Also
 # hosts the link-security loopback self-tests and the provisioning flows.
 #
-# Usage: lib/device info|clear|confirm|wipe|self-test|noise-ca-gen|noise-ca-root|noise-ca-sign [--port ...]
+# Usage: lib/device info|clear|confirm|wipe|shell|self-test|noise-provision <low|high|enroll>|noise-ca-gen|noise-ca-root|noise-ca-sign [--port ...]
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

@@ -67,6 +67,12 @@ message PairRequest { Privilege privilege = 1; }
 message UnpairRequest {}
 message AckResponse {}
 
+// Enrollment (only inside a session opened with the device's factory
+// enrollment key, which may send nothing else): pins the caller-supplied
+// client public key into the low-privilege slot, replacing any earlier
+// occupant, so exactly one enrolled client holds that slot at a time.
+message EnrollRequest { bytes client_public_key = 1; }
+
 message Request {
   uint32 id = 1;
   oneof op {
@@ -81,6 +87,7 @@ message Request {
     GetSerialNumberRequest get_serial_number = 10;
     GetLedRequest get_led = 11;
     SetLedRequest set_led = 12;
+    EnrollRequest enroll = 13;
   }
 }
 

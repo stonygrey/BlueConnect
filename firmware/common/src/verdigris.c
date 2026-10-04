@@ -163,8 +163,29 @@ static void handle_request(struct bt_conn *conn, const uint8_t *frame, size_t le
 	enum link_privilege privilege = link_privilege();
 	enum link_privilege required;
 
+	/* Enrollment sessions sit outside the tier ladder: exactly one command
+	 * is served to them, and that command is served to nobody else.
+	 */
+	if (privilege == LINK_PRIV_ENROLL && req.which_op != verdigris_Request_enroll_tag) {
+		rsp.status = verdigris_Status_STATUS_PERMISSION_DENIED;
+		strncpy(rsp.detail, "an enrollment session may only Enroll",
+			sizeof(rsp.detail) - 1);
+		send_response(conn, &rsp);
+		return;
+	}
+	if (privilege != LINK_PRIV_ENROLL && req.which_op == verdigris_Request_enroll_tag) {
+		rsp.status = privilege == LINK_PRIV_NONE
+			     ? verdigris_Status_STATUS_UNAUTHENTICATED
+			     : verdigris_Status_STATUS_PERMISSION_DENIED;
+		strncpy(rsp.detail, "Enroll needs a session opened with the enrollment key",
+			sizeof(rsp.detail) - 1);
+		send_response(conn, &rsp);
+		return;
+	}
+
 	switch (req.which_op) {
 	case verdigris_Request_pair_tag:
+	case verdigris_Request_enroll_tag:
 		required = LINK_PRIV_NONE;
 		break;
 	case verdigris_Request_get_time_tag:
@@ -276,7 +297,7 @@ static void handle_request(struct bt_conn *conn, const uint8_t *frame, size_t le
 			break;
 		case LINK_PAIR_LOCKED:
 			rsp.status = verdigris_Status_STATUS_PERMISSION_DENIED;
-			strncpy(rsp.detail, "slot is provisioned over USB",
+			strncpy(rsp.detail, "slot is locked (USB-provisioned or enrolled)",
 				sizeof(rsp.detail) - 1);
 			break;
 		case LINK_PAIR_UNSUPPORTED:
@@ -289,6 +310,20 @@ static void handle_request(struct bt_conn *conn, const uint8_t *frame, size_t le
 			strncpy(rsp.detail, "pairing was not confirmed on the device",
 				sizeof(rsp.detail) - 1);
 			break;
+		}
+		break;
+
+	case verdigris_Request_enroll_tag:
+		if (req.op.enroll.client_public_key.size != 32) {
+			rsp.status = verdigris_Status_STATUS_INVALID_ARGUMENT;
+			strncpy(rsp.detail, "client_public_key must be 32 bytes",
+				sizeof(rsp.detail) - 1);
+		} else if (link_enroll(req.op.enroll.client_public_key.bytes)) {
+			rsp.which_result = verdigris_Response_ack_tag;
+		} else {
+			rsp.status = verdigris_Status_STATUS_PERMISSION_DENIED;
+			strncpy(rsp.detail, "enrollment refused (low slot is provisioned over USB)",
+				sizeof(rsp.detail) - 1);
 		}
 		break;
 
@@ -393,7 +428,7 @@ void verdigris_wipe_foreign_credentials(const char *own_prefix)
 	 * pake/pake.c.
 	 */
 	static const char *const keys[] = {
-		"vg/sk", "vg/pin_lo", "vg/pin_hi", "vg/lock_lo", "vg/lock_hi", "vg/ca_root",
+		"vg/sk", "vg/pin_lo", "vg/pin_hi", "vg/pin_en", "vg/lock_lo", "vg/lock_hi", "vg/ca_root",
 		"ek/key", "ek/cred", "ek/peer_lo", "ek/peer_hi",
 		"ek/lock_lo", "ek/lock_hi", "ek/fails",
 		"pk/ver_lo", "pk/ver_hi", "pk/fails",

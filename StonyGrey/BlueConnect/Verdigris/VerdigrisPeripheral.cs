@@ -1,4 +1,4 @@
-﻿// Copyright © 2026 Stony Grey LLC.
+// Copyright © 2026 Stony Grey LLC.
 // SPDX-License-Identifier: MIT
 
 using Google.Protobuf;
@@ -136,6 +136,12 @@ public class VerdigrisPeripheral : IVerdigrisPeripheral
     public async Task Unpair(CancellationToken cancellationToken = default)
     {
         var request = new Request { Unpair = new UnpairRequest() };
+        await Invoke(request, Response.ResultOneofCase.Ack, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task Enroll(ReadOnlyMemory<byte> clientPublicKey, CancellationToken cancellationToken = default)
+    {
+        var request = new Request { Enroll = new EnrollRequest { ClientPublicKey = ByteString.CopyFrom(clientPublicKey.Span) } };
         await Invoke(request, Response.ResultOneofCase.Ack, cancellationToken).ConfigureAwait(false);
     }
 

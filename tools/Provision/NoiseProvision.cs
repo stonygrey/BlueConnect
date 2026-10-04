@@ -33,8 +33,12 @@ internal static class NoiseProvision
                 tier = PakeTier.High;
                 shellTier = "hi";
                 break;
+            case "enroll":
+            case "en":
+                // The third slot: the enrollment key, whose QR is the kit card.
+                return NoiseEnrollProvision.Provision(port, name, outPath);
             default:
-                Console.Error.WriteLine("tier must be low or high");
+                Console.Error.WriteLine("tier must be low, high, or enroll");
                 return 2;
         }
 
@@ -84,7 +88,7 @@ internal static class NoiseProvision
     }
 
     /// <summary>Finds the bare HEX64 line `vg cred` prints among the shell output.</summary>
-    private static byte[]? ParseDevicePublicKey(List<string> lines)
+    internal static byte[]? ParseDevicePublicKey(List<string> lines)
     {
         foreach (var line in lines)
         {

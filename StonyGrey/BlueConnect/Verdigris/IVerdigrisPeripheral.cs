@@ -1,4 +1,4 @@
-﻿// Copyright © 2026 Stony Grey LLC.
+// Copyright © 2026 Stony Grey LLC.
 // SPDX-License-Identifier: MIT
 
 using StonyGrey.BlueConnect.Abstractions;
@@ -60,4 +60,12 @@ public interface IVerdigrisPeripheral : IDisposable, IAsyncDisposable
 
     /// <summary>Clears the caller's own pairing slot on the device.</summary>
     Task Unpair(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Enrollment (the session must have been opened with the device's
+    /// factory enrollment key, which may send nothing else): pins
+    /// <paramref name="clientPublicKey"/> into the device's low-privilege
+    /// slot, replacing any earlier occupant.
+    /// </summary>
+    Task Enroll(ReadOnlyMemory<byte> clientPublicKey, CancellationToken cancellationToken = default);
 }

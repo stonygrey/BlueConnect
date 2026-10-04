@@ -6,3 +6,4 @@ verdigris.EchoRequest.payload  max_size:2048
 verdigris.EchoResponse.payload max_size:2048
 verdigris.Response.detail      max_size:64
 verdigris.NameResponse.name    max_size:20
+verdigris.EnrollRequest.client_public_key max_size:32

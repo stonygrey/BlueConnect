@@ -548,6 +548,13 @@ enum link_pair_result link_pair(enum link_privilege privilege)
 	return LINK_PAIR_UNSUPPORTED;
 }
 
+/* No enrollment on this link: the factory enrollment key is a Noise slot. */
+bool link_enroll(const uint8_t key[32])
+{
+	ARG_UNUSED(key);
+	return false;
+}
+
 bool link_unpair_slot(enum link_privilege privilege)
 {
 	/* Verifiers are factory credentials: erasing one over BLE would be a

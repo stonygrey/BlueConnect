@@ -114,7 +114,7 @@ public sealed class NoiseCredentialService : ObservableService<NoiseCredentials>
 
             await PairingStore.SetAsync(PinKey(role), Convert.ToBase64String(deviceKey)).ConfigureAwait(false);
             await PairingStore.SetAsync(PinNameKey(role), advertisement.LocalName).ConfigureAwait(false);
-            await PairingStore.SetAsync(OriginKey(role), "paired").ConfigureAwait(false);
+            await PairingStore.SetAsync(OriginKey(role), CredentialOriginStorage.Format(CredentialOrigin.Paired)).ConfigureAwait(false);
             await PublishState().ConfigureAwait(false);
             _logger.Here().LogInformation("Paired ({Role}) with '{Device}' ({Key}).", role, advertisement.LocalName, Convert.ToHexString(deviceKey));
         }
@@ -158,7 +158,8 @@ public sealed class NoiseCredentialService : ObservableService<NoiseCredentials>
             // still resolves to the slot. Discard the identity (and any cert
             // bound to it) so the phone genuinely loses the tier; scanning the
             // QR again restores it, because the label is the credential.
-            var provisioned = await PairingStore.GetAsync(OriginKey(role)).ConfigureAwait(false) == "provisioned";
+            var provisioned = CredentialOriginStorage.Parse(await PairingStore.GetAsync(OriginKey(role)).ConfigureAwait(false))
+                              == CredentialOrigin.Provisioned;
 
             PairingStore.Remove(PinKey(role));
             PairingStore.Remove(PinNameKey(role));
@@ -172,6 +173,39 @@ public sealed class NoiseCredentialService : ObservableService<NoiseCredentials>
                     "Discarded the provisioned {Role} identity; the device keeps its locked slot until cleared over USB.", role);
             }
             await PublishState().ConfigureAwait(false);
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
+    public async Task Enroll(IAdvertisement advertisement, NoiseEnrollmentPayload payload, CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+
+        await Gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            const PairingRole role = PairingRole.Low;
+            var identity = await GetIdentity(role).ConfigureAwait(false);
+
+            // The enrollment key is the session's identity for this one call;
+            // the device's key from the card is the pin, so the session runs
+            // IK and the device is authenticated before Enroll is sent.
+            var enrollment = new LinkSecurity(new LinkIdentity(payload.EnrollmentPrivateKey), PinnedPeerKey: payload.DevicePublicKey);
+
+            await using var verdigris = _scanner.CreateVerdigrisPeripheral(advertisement, _options, _logger, enrollment);
+            await verdigris.Peripheral.Connect(cancellationToken).ConfigureAwait(false);
+            await verdigris.Enroll(identity.StaticPublicKey, cancellationToken).ConfigureAwait(false);
+            await verdigris.Peripheral.Disconnect(cancellationToken).ConfigureAwait(false);
+
+            await PairingStore.SetAsync(PinKey(role), Convert.ToBase64String(payload.DevicePublicKey)).ConfigureAwait(false);
+            await PairingStore.SetAsync(PinNameKey(role), payload.DeviceName is { Length: > 0 } ? payload.DeviceName : advertisement.LocalName).ConfigureAwait(false);
+            await PairingStore.SetAsync(OriginKey(role), CredentialOriginStorage.Format(CredentialOrigin.Enrolled)).ConfigureAwait(false);
+            await PublishState().ConfigureAwait(false);
+            _logger.Here().LogInformation(
+                "Enrolled (Low) with '{Device}' ({Key}).", advertisement.LocalName, Convert.ToHexString(identity.StaticPublicKey));
         }
         finally
         {
@@ -199,7 +233,7 @@ public sealed class NoiseCredentialService : ObservableService<NoiseCredentials>
             {
                 PairingStore.Remove(PinNameKey(role));
             }
-            await PairingStore.SetAsync(OriginKey(role), "provisioned").ConfigureAwait(false);
+            await PairingStore.SetAsync(OriginKey(role), CredentialOriginStorage.Format(CredentialOrigin.Provisioned)).ConfigureAwait(false);
 
             await PublishState().ConfigureAwait(false);
             _logger.Here().LogInformation(
@@ -224,7 +258,7 @@ public sealed class NoiseCredentialService : ObservableService<NoiseCredentials>
         var pin = await PairingStore.GetAsync(PinKey(role)).ConfigureAwait(false);
         var name = await PairingStore.GetAsync(PinNameKey(role)).ConfigureAwait(false);
         var origin = await PairingStore.GetAsync(OriginKey(role)).ConfigureAwait(false);
-        return new NoiseCredentialState(pin is not null, name, origin);
+        return new NoiseCredentialState(pin is not null, name, CredentialOriginStorage.Parse(origin));
     }
 
     private static async Task<byte[]?> LoadCert(PairingRole role)

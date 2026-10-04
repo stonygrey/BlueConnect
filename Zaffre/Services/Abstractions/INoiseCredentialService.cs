@@ -7,9 +7,8 @@ using StonyGrey.Shared.Services.Abstractions;
 
 namespace Zaffre.Services.Abstractions;
 
-/// <summary>Origin is "paired" (ceremony) or "provisioned" (QR); null when
-/// stored before origins were recorded (treated as paired).</summary>
-public sealed record NoiseCredentialState(bool IsPaired, string? DeviceName, string? Origin = null);
+/// <summary>A role's pairing state; <see cref="Origin"/> is meaningful only when paired.</summary>
+public sealed record NoiseCredentialState(bool IsPaired, string? DeviceName, CredentialOrigin Origin = CredentialOrigin.Paired);
 
 /// <summary>Both roles' pairing states, published as one snapshot.</summary>
 public sealed record NoiseCredentials(NoiseCredentialState Low, NoiseCredentialState High)
@@ -47,6 +46,16 @@ public interface INoiseCredentialService : IObservableService<NoiseCredentials>
     /// by <c>lib/device noise-provision</c>, so no ceremony can displace it.
     /// </summary>
     Task StorePayload(PairingRole role, NoiseQrPayload payload);
+
+    /// <summary>
+    /// Enrolls this app's low-tier identity with a device from a factory
+    /// enrollment QR: opens a session with the payload's enrollment key,
+    /// sends <c>Enroll</c> with the low identity's public key, and on success
+    /// pins the payload's device key for the low role (<see cref="CredentialOrigin.Enrolled"/>).
+    /// The enrollment key is never stored. The device replaces any earlier
+    /// occupant of its low slot, so one enrolled phone holds it at a time.
+    /// </summary>
+    Task Enroll(IAdvertisement advertisement, NoiseEnrollmentPayload payload, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Installs a compact endorsement of this role's existing

@@ -20,8 +20,8 @@ namespace StonyGrey.BlueConnect.Secure;
 /// The signature is PURE_EDDSA over <c>version || subject</c>. Verify
 /// requires the provisioned CA root and that <c>subject</c> equals the
 /// initiator static just authenticated (<c>rs</c> after message 3).
-/// An endorsement grants no privilege by itself; a slot is still earned
-/// only through the button ceremony or USB provisioning.
+/// An endorsement grants no privilege by itself; a slot is written only
+/// by the button ceremony or by USB provisioning.
 /// </summary>
 public static class ClientEndorsement
 {

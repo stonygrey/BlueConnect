@@ -81,10 +81,15 @@ static int Usage()
                     Generate (or take) a setup code, write the derived
                     verifier over serial, and print the code + QR for the
                     Zaffre PAKE tab.
-          noise-provision <low|high> [--name <adv name>] [--out qr.svg]
-                    Mint an app identity for the tier, pin its public key
-                    into the slot over serial, and print the QR for the
-                    Zaffre Noise tab.
+          noise-provision <low|high|enroll> [--name <adv name>] [--out qr.svg]
+                    low|high: mint an app identity for the tier, pin its
+                    public key into the slot over serial, and print the QR
+                    for the Zaffre Noise tab.
+                    enroll: mint an enrollment key, pin it into the device's
+                    enrollment slot over serial, and print the kit QR. A
+                    phone that scans it enrolls its own key into the low
+                    slot (one phone at a time) and discards the enrollment
+                    key.
           edhoc-provision <low|high> [--name <adv name>] [--out qr.svg]
                     Issue an initiator credential for the tier, write it
                     over serial, read the device credential back, and print

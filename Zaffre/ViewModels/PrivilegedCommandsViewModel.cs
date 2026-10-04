@@ -33,7 +33,7 @@ public abstract class PrivilegedCommandsViewModel : ViewModelBase
     private readonly ILogger _logger;
     private readonly ObservableAsPropertyHelper<bool> _canRun;
     private readonly ObservableAsPropertyHelper<bool> _isPaired;
-    private readonly ObservableAsPropertyHelper<string?> _credentialOrigin;
+    private readonly ObservableAsPropertyHelper<CredentialOrigin> _credentialOrigin;
     private readonly ObservableAsPropertyHelper<bool> _deviceSecured;
     private readonly ObservableAsPropertyHelper<AuthenticationScheme> _deviceScheme;
     private readonly ObservableAsPropertyHelper<string> _pairingStatus;
@@ -210,8 +210,8 @@ public abstract class PrivilegedCommandsViewModel : ViewModelBase
 
     public bool IsPaired => _isPaired.Value;
 
-    /// <summary>"paired" or "provisioned"; null (legacy) reads as paired.</summary>
-    public string? CredentialOrigin => _credentialOrigin.Value;
+    /// <summary>How the role's credential was obtained; meaningful only while <see cref="IsPaired"/>.</summary>
+    public CredentialOrigin CredentialOrigin => _credentialOrigin.Value;
 
     /// <summary>What the selected device advertises: any pairing slot pinned.</summary>
     public bool DeviceSecured => _deviceSecured.Value;
@@ -374,9 +374,27 @@ public abstract class PrivilegedCommandsViewModel : ViewModelBase
 
     private async Task<bool> StoreProvisionedPayload(string text)
     {
+        if (NoiseEnrollmentPayload.TryParse(text, out var enrollment))
+        {
+            if (Role != PairingRole.Low)
+            {
+                _toasts.Warning("An enrollment QR enrolls the low tier — scan it on the low card.");
+                return false;
+            }
+
+            if (_selection.Current is not { } advertisement)
+            {
+                _toasts.Error("Select the device first.");
+                return false;
+            }
+
+            await _pairing.Enroll(advertisement, enrollment!);
+            return true;
+        }
+
         if (!NoiseQrPayload.TryParse(text, out var payload))
         {
-            _toasts.Error("That is not a BlueConnect Noise credential (SGNK1 payload).");
+            _toasts.Error("That is not a BlueConnect Noise credential (SGNK1) or enrollment (SGNE1) payload.");
             return false;
         }
 

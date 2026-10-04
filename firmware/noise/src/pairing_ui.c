@@ -193,6 +193,18 @@ static void hex_line(const struct shell *sh, const char *label, const uint8_t *d
 	shell_print(sh, "%s%s", label, hex);
 }
 
+static const char *provenance_label(enum link_privilege tier)
+{
+	switch (link_slot_provenance(tier)) {
+	case LINK_PROV_USB:
+		return " (usb)";
+	case LINK_PROV_ENROLLED:
+		return " (enrolled)";
+	default:
+		return "";
+	}
+}
+
 static int cmd_vg_info(const struct shell *sh, size_t argc, char **argv)
 {
 	ARG_UNUSED(argc);
@@ -201,6 +213,7 @@ static int cmd_vg_info(const struct shell *sh, size_t argc, char **argv)
 	const uint8_t *pub = link_static_public();
 	const uint8_t *lo = link_pin(LINK_PRIV_LOW);
 	const uint8_t *hi = link_pin(LINK_PRIV_HIGH);
+	const uint8_t *en = link_pin(LINK_PRIV_ENROLL);
 
 	shell_print(sh, "name: %s", bt_get_name());
 	shell_print(sh, "identity: %s", link_has_identity() ? "present" : "missing");
@@ -209,14 +222,18 @@ static int cmd_vg_info(const struct shell *sh, size_t argc, char **argv)
 	}
 	shell_print(sh, "paired: %s", link_is_paired() ? "yes" : "no");
 	shell_print(sh, "low slot: %s%s", lo ? "pinned" : "empty",
-		    link_slot_locked(LINK_PRIV_LOW) ? " (usb)" : "");
+		    provenance_label(LINK_PRIV_LOW));
 	if (lo) {
 		hex_line(sh, "  pin: ", lo, LINK_KEY_LEN);
 	}
 	shell_print(sh, "high slot: %s%s", hi ? "pinned" : "empty",
-		    link_slot_locked(LINK_PRIV_HIGH) ? " (usb)" : "");
+		    provenance_label(LINK_PRIV_HIGH));
 	if (hi) {
 		hex_line(sh, "  pin: ", hi, LINK_KEY_LEN);
+	}
+	shell_print(sh, "enrollment key: %s", en ? "pinned (usb)" : "empty");
+	if (en) {
+		hex_line(sh, "  key: ", en, LINK_KEY_LEN);
 	}
 	shell_print(sh, "ca root: %s", link_has_ca_root() ? "loaded" : "empty");
 	if (link_has_ca_root()) {
@@ -239,6 +256,9 @@ static enum link_privilege parse_tier(const char *arg)
 	if (strcmp(arg, "hi") == 0 || strcmp(arg, "high") == 0) {
 		return LINK_PRIV_HIGH;
 	}
+	if (strcmp(arg, "en") == 0 || strcmp(arg, "enroll") == 0) {
+		return LINK_PRIV_ENROLL;
+	}
 	return LINK_PRIV_NONE;
 }
 
@@ -248,7 +268,7 @@ static int cmd_vg_clear(const struct shell *sh, size_t argc, char **argv)
 		enum link_privilege tier = parse_tier(argv[1]);
 
 		if (tier == LINK_PRIV_NONE) {
-			shell_error(sh, "usage: vg clear [lo|hi|all]");
+			shell_error(sh, "usage: vg clear [lo|hi|en|all]");
 			return -EINVAL;
 		}
 
@@ -317,13 +337,13 @@ static int cmd_vg_set(const struct shell *sh, size_t argc, char **argv)
 	size_t len = 0;
 
 	if (argc != 3) {
-		shell_error(sh, "usage: vg set <lo|hi> <hex32>");
+		shell_error(sh, "usage: vg set <lo|hi|en> <hex32>");
 		return -EINVAL;
 	}
 
 	tier = parse_tier(argv[1]);
 	if (tier == LINK_PRIV_NONE) {
-		shell_error(sh, "tier must be lo or hi");
+		shell_error(sh, "tier must be lo, hi, or en");
 		return -EINVAL;
 	}
 
@@ -448,10 +468,10 @@ SHELL_STATIC_SUBCMD_SET_CREATE(vg_cmds,
 	SHELL_CMD(info, NULL, "Show link identity and pairing state", cmd_vg_info),
 	SHELL_CMD(keygen, NULL, "Rotate the device identity: vg keygen [force]", cmd_vg_keygen),
 	SHELL_CMD(cred, NULL, "Print the device public key as hex", cmd_vg_cred),
-	SHELL_CMD(set, NULL, "Pin a client key over USB (locks the slot): vg set <lo|hi> <hex32>",
+	SHELL_CMD(set, NULL, "Pin a client key over USB (locks the slot): vg set <lo|hi|en> <hex32>",
 		  cmd_vg_set),
 	SHELL_CMD(confirm, NULL, "Confirm the armed pairing (matching button)", cmd_vg_confirm),
-	SHELL_CMD(clear, NULL, "Clear pin slot(s) and locks: vg clear [lo|hi|all]", cmd_vg_clear),
+	SHELL_CMD(clear, NULL, "Clear pin slot(s) and locks: vg clear [lo|hi|en|all]", cmd_vg_clear),
 	SHELL_CMD(ca-root, NULL, "Show/set endorsement CA root: vg ca-root [<hex32>|clear]",
 		  cmd_vg_ca_root),
 	SHELL_CMD(wipe, NULL, "Factory wipe of every scheme's stored keys "

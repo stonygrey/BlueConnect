@@ -256,6 +256,10 @@ commands. The `vg` shell verbs are the same on all three images, so
 these work against whichever firmware is flashed. Provisioning is
 `lib/device pake-provision`, `noise-provision`, or `edhoc-provision` —
 each locks its slot against ceremonies and prints the credential QR.
+`lib/device noise-provision enroll --out kit.svg` instead writes an
+enrollment key and prints the kit QR: a phone that scans it enrolls its
+own key into the low slot (one phone at a time; see the Enrollment
+section of [noise-security.md](noise-security.md)).
 
 Optional Noise client endorsement (does not grant privilege; see
 [noise-security.md](noise-security.md)):

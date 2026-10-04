@@ -1,6 +1,7 @@
 @* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
 
 @typeparam TViewModel where TViewModel : PrivilegedCommandsViewModel
+@using Zaffre.Services.Abstractions
 @inherits ReactiveComponentBase<TViewModel>
 
 @* One tier's Noise pairing as a collapsible panel: the title carries the
@@ -78,10 +79,12 @@
     private bool WrongScheme => ViewModel!.DeviceScheme
         is AuthenticationScheme.Pake or AuthenticationScheme.Edhoc;
 
-    // "paired" vs "provisioned" from the stored origin; legacy credentials
-    // without one read as paired.
-    private string StateLabel => !ViewModel!.IsPaired ? "Unsecured"
-        : ViewModel!.CredentialOrigin == "provisioned" ? "Provisioned" : "Paired";
+    private string StateLabel => !ViewModel!.IsPaired ? "Unsecured" : ViewModel!.CredentialOrigin switch
+    {
+        CredentialOrigin.Provisioned => "Provisioned",
+        CredentialOrigin.Enrolled => "Enrolled",
+        _ => "Paired",
+    };
 
     // One named handler per button: ClickOnce keys its single-flight guard on
     // the handler method, so each button is guarded independently.

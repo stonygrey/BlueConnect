@@ -48,6 +48,11 @@ enum link_privilege {
 	LINK_PRIV_NONE = 0,
 	LINK_PRIV_LOW = 1,
 	LINK_PRIV_HIGH = 2,
+	/* A session opened with the factory enrollment key. It is not a rank:
+	 * the dispatcher serves it exactly one command, Enroll, and never
+	 * compares it against the tiers.
+	 */
+	LINK_PRIV_ENROLL = 3,
 };
 
 enum link_pair_result {
@@ -90,5 +95,12 @@ enum link_pair_result link_pair(enum link_privilege privilege);
  * erasing one over BLE would be a remote lockout of provisioned access).
  */
 bool link_unpair_slot(enum link_privilege privilege);
+
+/* Enrollment: a LINK_PRIV_ENROLL session pins `key` into the low slot,
+ * replacing any earlier occupant (one enrolled client at a time). Returns
+ * false when the session is not an enrollment session, the low slot is
+ * USB-provisioned, or this link has no enrollment (PAKE, EDHOC).
+ */
+bool link_enroll(const uint8_t key[32]);
 
 #endif /* LINK_IFACE_H_ */

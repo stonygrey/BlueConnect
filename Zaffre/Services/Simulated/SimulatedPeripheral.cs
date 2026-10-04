@@ -88,6 +88,12 @@ public sealed class SimulatedPeripheral : IPeripheral
         }
     }
 
+    /// <summary>The factory enrollment key (a test may set the preference); a session with it may only Enroll.</summary>
+    private static byte[]? PinEnroll => ReadPin(PinPreference + ".en");
+
+    private static bool IsEnrollmentKey(byte[]? remoteKey)
+        => remoteKey is not null && PinEnroll is { } en && remoteKey.AsSpan().SequenceEqual(en);
+
     /// <summary>Mirrors the firmware's slot lookup for a session's proven key.</summary>
     private static Privilege? PrivilegeOf(byte[]? remoteKey)
     {
@@ -293,6 +299,30 @@ public sealed class SimulatedPeripheral : IPeripheral
         // Mirrors the firmware's authorization table: the session key's slot
         // is its privilege; a key in no slot may only Pair; low gets the
         // read-only subset; only high may change state.
+        // Enrollment sessions sit outside the tier ladder, as in the firmware.
+        if (IsEnrollmentKey(remoteKey))
+        {
+            if (request.OpCase == Request.OpOneofCase.Enroll && request.Enroll.ClientPublicKey.Length == 32)
+            {
+                PinLow = request.Enroll.ClientPublicKey.ToByteArray();
+                response.Ack = new AckResponse();
+            }
+            else
+            {
+                response.Status = Status.PermissionDenied;
+                response.Detail = "an enrollment session may only Enroll";
+            }
+
+            return response.ToByteArray();
+        }
+
+        if (request.OpCase == Request.OpOneofCase.Enroll)
+        {
+            response.Status = Status.Unauthenticated;
+            response.Detail = "Enroll needs a session opened with the enrollment key";
+            return response.ToByteArray();
+        }
+
         var privilege = PrivilegeOf(remoteKey);
         var required = request.OpCase switch
         {
