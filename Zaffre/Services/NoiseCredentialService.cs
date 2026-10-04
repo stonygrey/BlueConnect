@@ -151,9 +151,26 @@ public sealed class NoiseCredentialService : ObservableService<NoiseCredentials>
                 _logger.Here().LogWarning(ex, "Device-side unpair ({Role}) failed; clearing the local pairing anyway.", role);
             }
 
+            // A provisioned credential is the identity itself: the QR carried
+            // the private key, and the device's slot is locked against remote
+            // unpair (and correctly refused above). Forgetting only the pin
+            // would leave this phone able to open XX sessions that the device
+            // still resolves to the slot. Discard the identity (and any cert
+            // bound to it) so the phone genuinely loses the tier; scanning the
+            // QR again restores it, because the label is the credential.
+            var provisioned = await PairingStore.GetAsync(OriginKey(role)).ConfigureAwait(false) == "provisioned";
+
             PairingStore.Remove(PinKey(role));
             PairingStore.Remove(PinNameKey(role));
             PairingStore.Remove(OriginKey(role));
+            if (provisioned)
+            {
+                PairingStore.Remove(IdentityKey(role));
+                PairingStore.Remove(CertKey(role));
+                _identities.Remove(role);
+                _logger.Here().LogInformation(
+                    "Discarded the provisioned {Role} identity; the device keeps its locked slot until cleared over USB.", role);
+            }
             await PublishState().ConfigureAwait(false);
         }
         finally
