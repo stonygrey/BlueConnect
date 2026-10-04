@@ -1,6 +1,7 @@
 ﻿// Copyright © 2026 Stony Grey LLC.
 // SPDX-License-Identifier: MIT
 
+using System.Diagnostics;
 using System.Reactive.Subjects;
 
 using Microsoft.Extensions.Logging;
@@ -51,12 +52,76 @@ public abstract class PeripheralBase : IPeripheral
 
     public IDisposable Subscribe(IObserver<PeripheralState> observer) => _stateChanges.Subscribe(observer);
 
+    /// <summary>Pause between connect attempts.</summary>
+    public static readonly TimeSpan ConnectRetryDelay = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Connects, retrying failed attempts for
+    /// <see cref="BlueConnectOptions.ConnectRetryTimeoutSeconds"/> (0: until
+    /// <paramref name="cancellationToken"/> is cancelled). Each attempt is
+    /// bounded by <see cref="BlueConnectOptions.ConnectTimeoutSeconds"/> and
+    /// never runs past the retry window. Cancellation and disposal end the
+    /// retries at once; any other failure is retried and, once the window is
+    /// spent, reported as a <see cref="TimeoutException"/> wrapping the last one.
+    /// </summary>
     public async Task Connect(CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(IsDisposed, this);
 
+        var unbounded = Options.ConnectRetryTimeoutSeconds <= 0;
+        var window = TimeSpan.FromSeconds(Options.ConnectRetryTimeoutSeconds);
+        var attemptTimeout = TimeSpan.FromSeconds(Options.ConnectTimeoutSeconds);
+        var started = Stopwatch.GetTimestamp();
+
+        for (var attempt = 1; ; attempt++)
+        {
+            var remaining = unbounded ? attemptTimeout : window - Stopwatch.GetElapsedTime(started);
+
+            try
+            {
+                await ConnectOnce(Min(attemptTimeout, remaining), cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException && !IsDisposed)
+            {
+                var elapsed = Stopwatch.GetElapsedTime(started);
+                if (!unbounded && elapsed + ConnectRetryDelay >= window)
+                {
+                    throw new TimeoutException(
+                        $"Connecting to '{Advertisement.LocalName}' did not succeed within {Options.ConnectRetryTimeoutSeconds}s " +
+                        $"({attempt} attempt(s); last failure: {ex.Message})", ex);
+                }
+
+                Logger.Here().LogWarning(
+                    "Connect attempt {Attempt} to '{Device}' failed after {Elapsed:F1}s ({Reason}); retrying.",
+                    attempt, Advertisement.LocalName, elapsed.TotalSeconds, ex.Message);
+                await Task.Delay(ConnectRetryDelay, cancellationToken).ConfigureAwait(false);
+
+                if (Options.RetryOnlyWhileAdvertising && !IsPresent)
+                {
+                    throw new BleTransportException(
+                        $"'{Advertisement.LocalName}' is no longer advertising; giving up after {attempt} attempt(s) " +
+                        $"(last failure: {ex.Message})", ex);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// True while the scanner has seen an advertisement from this device
+    /// within its expiry window. Judged by timestamp, not by cache presence:
+    /// a connecting peripheral is registered with the scanner and its entry
+    /// is never expired.
+    /// </summary>
+    private bool IsPresent
+        => _scanner.LastSeen(Advertisement.Id) is { } seen
+            && DateTimeOffset.Now - seen <= TimeSpan.FromSeconds(BlueConnectConstants.ScannerExpirationSeconds);
+
+    /// <summary>One bounded attempt: platform connect, then the connected state.</summary>
+    private async Task ConnectOnce(TimeSpan attemptTimeout, CancellationToken cancellationToken)
+    {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(Options.ConnectTimeoutSeconds));
+        timeout.CancelAfter(attemptTimeout);
 
         _scanner.Register(this);
 
@@ -71,7 +136,7 @@ public abstract class PeripheralBase : IPeripheral
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             AbortConnect();
-            throw new TimeoutException($"Connecting to '{Advertisement.LocalName}' timed out after {Options.ConnectTimeoutSeconds}s.");
+            throw new TimeoutException($"Connecting to '{Advertisement.LocalName}' timed out after {attemptTimeout.TotalSeconds:F0}s.");
         }
         catch
         {
@@ -79,6 +144,8 @@ public abstract class PeripheralBase : IPeripheral
             throw;
         }
     }
+
+    private static TimeSpan Min(TimeSpan a, TimeSpan b) => a < b ? a : b;
 
     public async Task Disconnect(CancellationToken cancellationToken = default)
     {

@@ -165,6 +165,13 @@ public abstract class ScannerBase : IScanner
     protected bool TryGetCached(string id, out IAdvertisement advertisement)
         => _cache.TryGetValue(id, out advertisement!);
 
+    /// <summary>
+    /// When the device's last cached advertisement was seen; null when the
+    /// device has never been seen.
+    /// </summary>
+    protected internal DateTimeOffset? LastSeen(string id)
+        => _cache.TryGetValue(id, out var advertisement) ? advertisement.Timestamp : null;
+
     /// <summary>Merges a new RSSI sample into a running min/max, ignoring out-of-range readings.</summary>
     protected Rssi MergeRssi(Rssi previous, int dbm)
         => dbm > RssiLimits.MinDbm && dbm < RssiLimits.MaxDbm
