@@ -41,14 +41,4 @@ void verdigris_set_secured(uint8_t flags);
 /* App-controlled LED 1 state (SetLed command); main.c drives the pin. */
 bool verdigris_led_state(void);
 
-/* Factory-wipe support. Settings survive a `west flash` sector erase, so
- * every scheme's credentials sit in the same partition regardless of which
- * image is running — a wipe that only cleared its own store would leave
- * another image's trust (USB locks included) to resurrect on reflash.
- * Deletes every known credential key EXCEPT those under own_prefix
- * ("vg/", "ek/", or "pk/"), which the caller's own clear/keygen functions
- * manage coherently with their RAM state.
- */
-void verdigris_wipe_foreign_credentials(const char *own_prefix);
-
 #endif /* VERDIGRIS_H_ */

@@ -1,0 +1,23 @@
+#!/bin/bash
+# Copyright © 2026 Stony Grey LLC.
+# SPDX-License-Identifier: MIT
+#
+# Runs the hardware UI test against the React Native app installed on the
+# phone: generates the test project when project.yml is newer, takes the
+# Apple team from ../signing.local.json (the same file app.config.ts reads),
+# and runs xcodebuild test on the device. The app must already be installed
+# (`npx expo run:ios --device <udid>`), the board must be advertising, and
+# `lib/device confirm` must be looping on the host for the pairing steps.
+#
+#   uitests/run <device udid>
+set -euo pipefail
+cd "$(dirname "$0")"
+udid="${1:?usage: uitests/run <device udid>}"
+team=$(python3 -c 'import json; print(json.load(open("../signing.local.json"))["appleTeamId"])')
+if [[ ! -f ZaffreReactUITests.xcodeproj/project.pbxproj || project.yml -nt ZaffreReactUITests.xcodeproj/project.pbxproj ]]; then
+    xcodegen generate
+fi
+xcodebuild -project ZaffreReactUITests.xcodeproj -scheme ZaffreReactUITests \
+    -destination "id=$udid" -derivedDataPath build \
+    DEVELOPMENT_TEAM="$team" -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+    test

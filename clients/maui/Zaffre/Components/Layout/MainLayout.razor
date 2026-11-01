@@ -1,0 +1,69 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@inherits LayoutComponentBase
+
+<MudThemeProvider @ref="_provider" Theme="@Theme" @bind-IsDarkMode="_isDarkMode" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<ToastBridge />
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIcon Icon="@ZaffreIcon" Class="mr-2" />
+        <MudText Typo="Typo.h6">Zaffre</MudText>
+    </MudAppBar>
+    <MudMainContent Class="pa-4">
+        @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private MudThemeProvider? _provider;
+    private bool _isDarkMode;
+
+    // The page follows the system's light or dark setting, as the native
+    // clients do: the setting is read once the provider has rendered, and
+    // changes are tracked for as long as the app runs.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _provider is null) return;
+        _isDarkMode = await _provider.GetSystemDarkModeAsync();
+        await _provider.WatchSystemDarkModeAsync(OnSystemDarkModeChanged);
+        StateHasChanged();
+    }
+
+    private Task OnSystemDarkModeChanged(bool isDarkMode)
+    {
+        _isDarkMode = isDarkMode;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    // The Z-beacon mark: exact outline geometry from Resources/AppIcon/appiconfg.svg
+    // (456 grid), scaled onto the 24x24 icon grid.
+    private const string ZaffreIcon =
+        "<g transform=\"scale(0.05263)\">" +
+        "<g transform=\"translate(-42.1062,64.814)\">" +
+        "<path d=\"M366,132C366,93.599 334.401,62 296,62\" stroke=\"currentColor\" stroke-width=\"30\" fill=\"none\" stroke-linecap=\"round\"/>" +
+        "<path d=\"M420,132C420,63.976 364.024,8 296,8\" stroke=\"currentColor\" stroke-width=\"30\" fill=\"none\" stroke-linecap=\"round\"/>" +
+        "</g>" +
+        "<g transform=\"translate(-103.897,185.841)\">" +
+        "<path d=\"M182.004,197.345L188.754,164.861L307.441,25.642L211.394,25.642L218.566,-8.811L367.207,-8.811L361.019,23.533L241.066,163.595C253.816,163.314 261.176,163.174 263.144,163.174C272.144,163.174 284.566,163.08 300.41,162.892L349.066,162.892L341.894,197.345L182.004,197.345Z\" fill=\"currentColor\"/>" +
+        "</g></g>";
+
+    private static readonly MudTheme Theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#0014A8",
+            AppbarBackground = "#0014A8",
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#B9C3FF",
+            PrimaryContrastText = "#0014A8",
+            AppbarBackground = "#0014A8",
+        },
+    };
+}

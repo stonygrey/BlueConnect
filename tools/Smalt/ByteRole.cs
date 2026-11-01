@@ -35,7 +35,7 @@ internal static class ByteRoles
         (ByteRole.HandshakePayload, "handshake payload", "#a16207", "Handshake payload 0x5A plus its 16-byte tag."),
         (ByteRole.Ciphertext, "ciphertext", "#0369a1", "AES-GCM ciphertext (application bytes)."),
         (ByteRole.Tag, "AEAD tag", "#be123c", "16-byte authentication tag."),
-        (ByteRole.Continuation, "continuation", "#78716c", "Payload on a segment that is not START — the type byte lives on the first segment — or a body that is not a known handshake/sealed layout."),
+        (ByteRole.Continuation, "continuation", "#78716c", "Payload on a segment that is not START — the type byte is on the first segment — or a body that is not a known handshake/sealed layout."),
     ];
 
     public static ByteRole[] Classify(IoLine io)

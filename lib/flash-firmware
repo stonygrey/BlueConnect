@@ -1,10 +1,10 @@
 #!/bin/bash
 # Copyright © 2026 Stony Grey LLC.
 # SPDX-License-Identifier: MIT
-# Builds (incrementally) and flashes a firmware app to the attached
-# board over its onboard J-Link, then resets the board.
+# Builds (incrementally) and flashes the firmware to the attached board
+# over its onboard J-Link, then resets the board.
 #
-# Usage: lib/flash-firmware [--pristine] [noise|pake|edhoc]
+# Usage: lib/flash-firmware [--pristine]
 #
 # Environment overrides: NCS_VERSION, BOARD, NCS_ROOT (see lib/build-firmware);
 # SNR to select a specific J-Link by serial number when more than one is
@@ -32,14 +32,7 @@ if [[ -z "${NCS_ROOT:-}" ]]; then
   NCS_ROOT="${NCS_ROOT:-/opt/nordic/ncs}"
 fi
 
-APP="noise"
-for arg in "$@"; do
-  case "$arg" in
-    noise|pake|edhoc) APP="$arg" ;;
-  esac
-done
-
-BUILD_DIR="$(pwd)/firmware/$APP/build"
+BUILD_DIR="$(pwd)/firmware/noise/build"
 WORKSPACE="$NCS_ROOT/$NCS_VERSION"
 
 SNR_ARG=""

@@ -45,7 +45,7 @@ static void unpair_led_off(struct k_timer *timer)
 
 static K_TIMER_DEFINE(unpair_led_timer, unpair_led_off, NULL);
 
-/* The wipe salute: LEDs 2 and 3 (dk indices 3/4) flash together three times so a factory
+/* The wipe indication: LEDs 2 and 3 (dk indices 3/4) flash together three times so a factory
  * wipe is unmistakable (LED1/LED2 belong to the app state and the
  * connection; they stay out of it).
  */
@@ -106,7 +106,7 @@ void pairing_ui_unpair_ack(void)
 
 /* Factory wipe: pins, locks, and the device identity all fall; a fresh
  * identity is generated immediately so the link keeps working. Every
- * printed QR is orphaned and every pinned phone will alarm — that is the
+ * printed QR is invalidated and every pinned phone fails its pin check; that is the
  * point of the gesture.
  */
 static void factory_wipe(void)
@@ -114,7 +114,6 @@ static void factory_wipe(void)
 	link_unpair();
 	link_clear_ca_root();
 	(void)link_keygen(true);
-	verdigris_wipe_foreign_credentials("vg/");
 	salute_start();
 }
 
@@ -131,10 +130,10 @@ static void button_changed(uint32_t button_state, uint32_t has_changed)
 	enum link_privilege needed = link_armed();
 	uint32_t chord = PAIR_BTN_LO_MSK | PAIR_BTN_HI_MSK;
 
-	/* Buttons 2+3 (dk indices 3/4) held together (no window armed) = factory wipe, fired
-	 * automatically at the 5 s mark while still held — the salute starting
-	 * is the cue to let go; no counting. Releasing early cancels. The
-	 * chord owns both buttons and swallows its own release.
+	/* Buttons 2+3 (dk indices 3/4) held together (no window armed) = factory wipe, triggered
+	 * automatically at the 5 s mark while still held — the LED flashes starting
+	 * are the cue to let go; no counting. Releasing early cancels. The
+	 * chord claims both buttons and ignores their release.
 	 */
 	if ((button_state & chord) == chord) {
 		if (needed == LINK_PRIV_NONE && !chord_armed) {
@@ -147,7 +146,7 @@ static void button_changed(uint32_t button_state, uint32_t has_changed)
 	if (chord_armed) {
 		chord_armed = false;
 		k_work_cancel_delayable(&wipe_work);
-		return; /* swallow the chord's release */
+		return; /* ignore the chord's release */
 	}
 
 	if (has_changed & PAIR_BTN_LO_MSK) {
@@ -288,7 +287,7 @@ static int cmd_vg_keygen(const struct shell *sh, size_t argc, char **argv)
 	if (!link_keygen(force)) {
 		shell_error(sh, link_has_identity()
 			    ? "an identity exists; `vg keygen force` rotates it "
-			      "(every pinned phone will alarm)"
+			      "(every pinned phone will fail its pin check)"
 			    : "identity generation failed");
 		return -EINVAL;
 	}
@@ -460,7 +459,7 @@ static int cmd_vg_wipe(const struct shell *sh, size_t argc, char **argv)
 	ARG_UNUSED(argv);
 
 	factory_wipe();
-	shell_print(sh, "wiped every scheme's stored keys; a fresh identity was generated");
+	shell_print(sh, "wiped the stored keys; a fresh identity was generated");
 	return 0;
 }
 
@@ -474,7 +473,7 @@ SHELL_STATIC_SUBCMD_SET_CREATE(vg_cmds,
 	SHELL_CMD(clear, NULL, "Clear pin slot(s) and locks: vg clear [lo|hi|en|all]", cmd_vg_clear),
 	SHELL_CMD(ca-root, NULL, "Show/set endorsement CA root: vg ca-root [<hex32>|clear]",
 		  cmd_vg_ca_root),
-	SHELL_CMD(wipe, NULL, "Factory wipe of every scheme's stored keys "
+	SHELL_CMD(wipe, NULL, "Factory wipe of the stored keys "
 		  "(same as holding Buttons 2+3 for 5 s)", cmd_vg_wipe),
 	SHELL_SUBCMD_SET_END);
 

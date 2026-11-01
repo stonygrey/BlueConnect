@@ -1,0 +1,109 @@
+# Copyright © 2026 Stony Grey LLC.
+# SPDX-License-Identifier: MIT
+#
+# xcodegen manifest for the Swift client. `xcodegen generate` writes
+# ZaffreSwift.xcodeproj next to this file; the project is gitignored and
+# this file is the source of truth. The account-specific signing value,
+# the team, is not here: Signing.local.xcconfig (gitignored, copied from
+# Signing.local.xcconfig.example) carries it and is applied to every
+# configuration. The signing style is here because it is not account
+# specific. `missingConfigFiles` is disabled so that a clone
+# without the local file still generates; its builds then fail at signing.
+name: ZaffreSwift
+options:
+  bundleIdPrefix: com.stonygrey
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+  disabledValidations: [missingConfigFiles]
+configFiles:
+  Debug: Signing.local.xcconfig
+  Release: Signing.local.xcconfig
+packages:
+  BlueConnect:
+    path: ../BlueConnect
+settings:
+  base:
+    # The Mac Catalyst deployment target. Without it Xcode 27.1 gives the
+    # UI test bundle the SDK's version (27.2), and xcodebuild then refuses
+    # to run the test on a Mac whose macOS is older than that.
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    # Automatic signing: Xcode picks the team's Apple Development certificate
+    # and creates the iPhone team profile on demand; the Catalyst build needs
+    # no profile because Entitlements.plist is empty.
+    CODE_SIGN_STYLE: Automatic
+targets:
+  ZaffreSwift:
+    type: application
+    platform: iOS
+    supportedDestinations: [iOS, macCatalyst]
+    sources:
+      - Sources
+    dependencies:
+      - package: BlueConnect
+        product: BlueConnect
+      - package: BlueConnect
+        product: BlueConnectCoreBluetooth
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: Zaffre Swift
+        # xcodegen writes literal 1.0 and 1 for these unless they are given, so
+        # they are tied to the target's version settings here.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSBluetoothAlwaysUsageDescription: Zaffre scans for and connects to nearby Nordic dev boards to run connection tests.
+        NSCameraUsageDescription: Zaffre scans the credential QR created over USB, or an enrollment card, to provision a tier.
+        # The launch screen: the splash artwork on Zaffre blue. Mac Catalyst
+        # has no launch screen.
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchIcon
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        LSApplicationCategoryType: public.app-category.developer-tools
+    entitlements:
+      path: Entitlements.plist
+      properties: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.stonygrey.zaffre.swift
+        # On the target, not the project: xcodegen gives every application
+        # target MARKETING_VERSION 1.0 and CURRENT_PROJECT_VERSION 1 as
+        # defaults, which would override project-level values.
+        MARKETING_VERSION: "1.0.2"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2,6"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: YES
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        ENABLE_PREVIEWS: YES
+        GENERATE_INFOPLIST_FILE: NO
+  ZaffreSwiftUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    supportedDestinations: [iOS, macCatalyst]
+    sources:
+      - UITests
+    dependencies:
+      - target: ZaffreSwift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.stonygrey.zaffre.swift.uitests
+        TEST_TARGET_NAME: ZaffreSwift
+        SUPPORTS_MACCATALYST: YES
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  ZaffreSwift:
+    build:
+      targets:
+        ZaffreSwift: all
+        ZaffreSwiftUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - ZaffreSwiftUITests

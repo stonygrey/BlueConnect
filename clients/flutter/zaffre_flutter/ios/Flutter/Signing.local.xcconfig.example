@@ -1,0 +1,13 @@
+// Copyright © 2026 Stony Grey LLC.
+// SPDX-License-Identifier: MIT
+//
+// Copy this file to Signing.local.xcconfig (gitignored) and fill in the
+// team from your Apple Developer account. Debug.xcconfig and
+// Release.xcconfig include the copy, so it reaches every configuration of
+// the Runner target; the project file names no team itself. Signing is
+// automatic: Xcode uses the team's Apple Development certificate and
+// creates the iPhone team profile on the first device build. The simulator
+// build needs no team, which is why the include is optional.
+
+// Team ID from https://developer.apple.com/account → Membership.
+DEVELOPMENT_TEAM = YOURTEAMID

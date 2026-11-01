@@ -1,0 +1,13 @@
+{
+  "name": "zaffre-react-native",
+  "private": true,
+  "description": "The React Native client of the Verdigris device: the BlueConnect TypeScript package and the Zaffre app, as one npm workspace.",
+  "workspaces": [
+    "blueconnect",
+    "zaffre_rn"
+  ],
+  "overrides": {
+    "react": "19.2.3",
+    "react-native": "0.86.3"
+  }
+}

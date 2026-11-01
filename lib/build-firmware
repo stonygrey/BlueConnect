@@ -1,12 +1,11 @@
 #!/bin/bash
 # Copyright © 2026 Stony Grey LLC.
 # SPDX-License-Identifier: MIT
-# Builds a firmware app (firmware/<app>) for BOARD (default
+# Builds the firmware (firmware/noise) for BOARD (default
 # nrf54l15dk/nrf54l15/cpuapp; set BOARD=nrf52840dk/nrf52840 for the older kit).
 #
-# Usage: lib/build-firmware [--pristine] [noise|pake|edhoc]
+# Usage: lib/build-firmware [--pristine]
 #   --pristine   full rebuild (required after Kconfig/prj.conf changes)
-#   app          which firmware app to build (default noise)
 #
 # Environment overrides:
 #   NCS_VERSION  nRF Connect SDK version   (default v3.4.0)
@@ -15,7 +14,7 @@
 #
 # Prerequisites: nrfutil on PATH (~/bin) with the sdk-manager command and the
 # matching SDK installed (see documents/build-deploy.md). Runs on macOS and
-# in WSL: the SDK lives under /opt/nordic/ncs on the Mac and ~/ncs in WSL
+# in WSL: the SDK is under /opt/nordic/ncs on the Mac and ~/ncs in WSL
 # (no sudo needed there); NCS_ROOT is auto-detected from whichever exists.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -36,15 +35,14 @@ if [[ -z "${NCS_ROOT:-}" ]]; then
 fi
 
 PRISTINE=""
-APP="noise"
 for arg in "$@"; do
   case "$arg" in
     --pristine) PRISTINE="--pristine" ;;
-    noise|pake|edhoc) APP="$arg" ;;
-    *) echo "Usage: lib/build-firmware [--pristine] [noise|pake|edhoc]" >&2; exit 2 ;;
+    *) echo "Usage: lib/build-firmware [--pristine]" >&2; exit 2 ;;
   esac
 done
 
+APP="noise"
 APP_DIR="$(pwd)/firmware/$APP"
 BUILD_DIR="$APP_DIR/build"
 WORKSPACE="$NCS_ROOT/$NCS_VERSION"

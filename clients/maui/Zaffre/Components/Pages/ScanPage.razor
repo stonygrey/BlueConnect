@@ -1,0 +1,65 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@page "/"
+@inherits ReactiveComponentBase<ScanViewModel>
+@inject NavigationManager Navigation
+
+<MudStack Spacing="4">
+    <MudText Typo="Typo.h5">Select a device</MudText>
+
+    @if (ViewModel!.Devices.Count == 0)
+    {
+        <MudStack AlignItems="AlignItems.Center" Spacing="3" Class="mt-8">
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            <MudText Typo="Typo.body2">Scanning for Verdigris devices&hellip;</MudText>
+        </MudStack>
+    }
+    else
+    {
+        @foreach (var device in ViewModel!.Devices)
+        {
+            <MudPaper Elevation="1" Class="pa-3 cursor-pointer" @onclick="() => Select(device)">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.subtitle1">@device.LocalName</MudText>
+                        <MudText Typo="Typo.caption">@device.Id</MudText>
+                    </MudStack>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        @* Every row shows its security state: the padlock
+                           means a client key is pinned. *@
+                        @if (device.IsSecured)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Color="Color.Success"
+                                     title="Paired. Only the pinned client is accepted" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.LockOpen" Size="Size.Small" Color="Color.Default"
+                                     title="Not paired. Any client can open an encrypted session" />
+                        }
+                        @if (!device.IsConnectable)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">not connectable</MudChip>
+                        }
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info">@($"{device.Rssi.ValueDbm} dBm")</MudChip>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        }
+    }
+</MudStack>
+
+<MudText Typo="Typo.caption"
+         Style="position: fixed; left: 12px; bottom: calc(6px + env(safe-area-inset-bottom)); color: #9e9e9e; font-size: 0.7rem; pointer-events: none;">
+    @($"v{AppInfo.Current.VersionString}")
+</MudText>
+
+@code {
+    private void Select(IAdvertisement device)
+    {
+        ViewModel!.Select(device);
+
+        // Open the Noise tab, where the user acts first.
+        Navigation.NavigateTo("/noise");
+    }
+}

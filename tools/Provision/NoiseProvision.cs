@@ -4,12 +4,11 @@
 using Net.Codecrete.QrCodeGenerator;
 
 using StonyGrey.BlueConnect.Secure;
-using StonyGrey.Spake2Plus;
 
 namespace StonyGrey.BlueConnect.Provision;
 
 /// <summary>
-/// The factory-station flow for the Noise firmware: mint a fresh app
+/// The factory-station flow for the Noise firmware: generate a fresh app
 /// identity for a tier, pin its public key into the device's slot over the
 /// serial shell (which locks the slot — no ceremony may replace it), read
 /// the device's public key back, and emit the QR that carries the whole
@@ -19,18 +18,18 @@ internal static class NoiseProvision
 {
     public static int Provision(string tierArg, string? port, string? name, string? outPath)
     {
-        PakeTier tier;
+        Tier tier;
         string shellTier;
         switch (tierArg.ToLowerInvariant())
         {
             case "low":
             case "lo":
-                tier = PakeTier.Low;
+                tier = Tier.Low;
                 shellTier = "lo";
                 break;
             case "high":
             case "hi":
-                tier = PakeTier.High;
+                tier = Tier.High;
                 shellTier = "hi";
                 break;
             case "enroll":

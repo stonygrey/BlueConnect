@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "Zaffre React",
+    "slug": "zaffre-react",
+    "version": "1.0.2",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "zaffre-react",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.stonygrey.zaffre.react",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocalNetworkUsageDescription": "A debug build loads its JavaScript from the Metro server on the development Mac over the local network.",
+        "NSBonjourServices": [
+          "_http._tcp"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.stonygrey.zaffre.react",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0014A8"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0014A8",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 128,
+          "dark": {
+            "backgroundColor": "#0014A8"
+          }
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "26.0"
+          },
+          "android": {
+            "minSdkVersion": 34,
+            "compileSdkVersion": 37,
+            "targetSdkVersion": 37
+          }
+        }
+      ],
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [],
+          "neverForLocation": true,
+          "bluetoothAlwaysPermission": "Zaffre scans for and connects to nearby Nordic dev boards to run connection tests."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Zaffre scans the credential QR created over USB, or an enrollment card, to provision a tier.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-secure-store",
+      "./plugins/withSceneLifecycle.js"
+    ]
+  }
+}

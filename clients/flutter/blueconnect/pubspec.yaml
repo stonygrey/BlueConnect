@@ -1,0 +1,25 @@
+# Copyright © 2026 Stony Grey LLC.
+# SPDX-License-Identifier: MIT
+name: blueconnect
+description: "The BlueConnect protocol library for Flutter: GATT segments, the Noise link over Torann, Verdigris commands, and the universal_ble backend."
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.5
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  torann: 0.3.1
+  universal_ble: 2.3.0
+  protobuf: 6.1.0
+  fixnum: 1.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:

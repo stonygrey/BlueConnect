@@ -5,12 +5,9 @@ using System.IO.Ports;
 
 using StonyGrey.BlueConnect.Provision;
 
-// Zaffre device maintenance tool. It talks to a board over the J-Link USB
-// serial shell for inspection, recovery, and PAKE provisioning (USB access
-// is the possession proof), and hosts the link-security loopback self-tests.
-
-// The `vg` shell verbs are normalized across the three firmware images, so
-// info/clear/confirm/wipe work against whichever one is flashed.
+// Zaffre device maintenance tool. It communicates with a board over the J-Link USB
+// serial shell for inspection, recovery, and provisioning (USB access is the
+// possession proof), and hosts the link-security loopback self-tests.
 return args switch
 {
     ["info", .. var rest] => Serial("vg info", OptionValue(rest, "--port")),
@@ -23,14 +20,7 @@ return args switch
     ["shell", var cmd, .. var rest] => Serial(cmd, OptionValue(rest, "--port")),
     ["self-test"] => SelfTest.Run(),
     ["interop"] => InteropTest.Run(),
-    ["pake-self-test"] => PakeSelfTest.Run(),
-    ["edhoc-self-test"] => EdhocSelfTest.Run(),
-    ["pake-provision", var tier, .. var rest] => PakeProvision.Provision(
-        tier, OptionValue(rest, "--port"), OptionValue(rest, "--code"),
-        OptionValue(rest, "--name"), OptionValue(rest, "--out")),
     ["noise-provision", var tier, .. var rest] => NoiseProvision.Provision(
-        tier, OptionValue(rest, "--port"), OptionValue(rest, "--name"), OptionValue(rest, "--out")),
-    ["edhoc-provision", var tier, .. var rest] => EdhocProvision.Provision(
         tier, OptionValue(rest, "--port"), OptionValue(rest, "--name"), OptionValue(rest, "--out")),
     ["noise-ca-gen", .. var rest] => NoiseCa.Generate(
         OptionValue(rest, "--key"), OptionValue(rest, "--pub"), rest.Contains("--force")),
@@ -48,8 +38,7 @@ static int Usage()
     Console.Error.WriteLine("""
         usage: device <command> [--port <serial port>]
 
-        These work against whichever firmware image is flashed (the `vg`
-        shell verbs are the same on all three):
+        Device commands, over the `vg` shell on the USB serial port:
 
           info      Show the device's identity, slots (with provenance), and
                     session state.
@@ -59,8 +48,9 @@ static int Usage()
           confirm   Confirm an in-progress pairing ceremony (same as the
                     matching button; USB access is the same possession proof).
           wipe      Factory wipe: slots, locks, and the device identity/key
-                    (same as holding Buttons 3+4 for 5 s). Orphans every
-                    printed QR; pinned phones alarm on their next session.
+                    (same as holding Buttons 2+3 for 5 s). Invalidates every
+                    printed QR; pinned phones fail the pin check on their
+                    next session.
           console   Echo the device's serial console for a while.
 
         Loopback tests (no device needed):
@@ -68,32 +58,19 @@ static int Usage()
           self-test Run the Noise link loopback self-test.
           interop   Verify Torann and the hand-rolled Noise implementation
                     speak the same wire dialect, both roles.
-          pake-self-test
-                    Run the SPAKE2+ link loopback self-test.
-          edhoc-self-test
-                    Run the EDHOC link loopback self-test.
 
         Provisioning (locks the slot against ceremonies; each QR carries the
         slot's private material — the label IS the credential):
 
-          pake-provision <low|high> [--code XXXX-XXXX-XXXX-XXXX]
-                         [--name <adv name>] [--out qr.svg]
-                    Generate (or take) a setup code, write the derived
-                    verifier over serial, and print the code + QR for the
-                    Zaffre PAKE tab.
           noise-provision <low|high|enroll> [--name <adv name>] [--out qr.svg]
-                    low|high: mint an app identity for the tier, pin its
+                    low|high: generate an app identity for the tier, pin its
                     public key into the slot over serial, and print the QR
                     for the Zaffre Noise tab.
-                    enroll: mint an enrollment key, pin it into the device's
+                    enroll: generate an enrollment key, pin it into the device's
                     enrollment slot over serial, and print the kit QR. A
                     phone that scans it enrolls its own key into the low
                     slot (one phone at a time) and discards the enrollment
                     key.
-          edhoc-provision <low|high> [--name <adv name>] [--out qr.svg]
-                    Issue an initiator credential for the tier, write it
-                    over serial, read the device credential back, and print
-                    the QR for the Zaffre EDHOC tab.
 
         Endorsement CA (Ed25519, tool-only private key; grants no privilege):
 

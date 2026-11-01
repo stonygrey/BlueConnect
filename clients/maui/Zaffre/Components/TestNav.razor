@@ -1,0 +1,21 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@inject NavigationManager Navigation
+
+<MudStack Row="true" Spacing="2" Class="mb-2">
+    <MudButton Variant="@VariantFor("/noise")" Color="Color.Primary" Size="Size.Small"
+               OnClick="@(() => Navigation.NavigateTo("/noise"))">Noise</MudButton>
+    <MudButton Variant="@VariantFor("/high")" Color="Color.Primary" Size="Size.Small"
+               OnClick="@(() => Navigation.NavigateTo("/high"))">High</MudButton>
+    <MudButton Variant="@VariantFor("/low")" Color="Color.Primary" Size="Size.Small"
+               OnClick="@(() => Navigation.NavigateTo("/low"))">Low</MudButton>
+    <MudButton Variant="@VariantFor("/test")" Color="Color.Primary" Size="Size.Small"
+               OnClick="@(() => Navigation.NavigateTo("/test"))">Loop</MudButton>
+</MudStack>
+
+@code {
+    private Variant VariantFor(string route)
+        => Navigation.Uri.EndsWith(route, StringComparison.OrdinalIgnoreCase)
+            ? Variant.Filled
+            : Variant.Outlined;
+}

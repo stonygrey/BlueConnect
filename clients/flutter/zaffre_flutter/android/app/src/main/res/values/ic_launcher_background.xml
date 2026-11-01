@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT -->
+<resources>
+    <!-- Zaffre blue, the icon's background colour. -->
+    <color name="ic_launcher_background">#0014A8</color>
+</resources>

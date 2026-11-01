@@ -1,0 +1,14 @@
+// Copyright © 2026 Stony Grey LLC.
+// SPDX-License-Identifier: MIT
+//
+// Copy this file to Signing.local.xcconfig (gitignored) and fill in the
+// team from your Apple Developer account. project.yml applies the copy to
+// every configuration of both targets. Signing is automatic, so no identity or
+// profile is named here: Xcode uses the team's Apple Development
+// certificate, creates the iPhone team profile on demand when xcodebuild
+// runs with -allowProvisioningUpdates, and needs no profile for the Mac
+// Catalyst build because the entitlements are empty. A SETTING=value on
+// the xcodebuild command line still overrides this file.
+
+// Team ID from https://developer.apple.com/account → Membership.
+DEVELOPMENT_TEAM = YOURTEAMID

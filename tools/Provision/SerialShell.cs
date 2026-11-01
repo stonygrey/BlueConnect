@@ -72,7 +72,7 @@ internal static class SerialShell
     /// <summary>
     /// Writes a command in small paced chunks: an unpaced long line — a hex
     /// CCS or verifier — loses characters between the J-Link's USB CDC and
-    /// the chip's UART and dies silently. Verified empirically: enlarging
+    /// the chip's UART and produces no error. Verified empirically: enlarging
     /// the shell's RX ring alone does not fix it; pacing does.
     /// </summary>
     private static void WritePaced(SerialPort serial, string text)

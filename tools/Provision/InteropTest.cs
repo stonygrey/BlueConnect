@@ -32,14 +32,14 @@ internal static class InteropTest
     /// <summary>Torann as the app (initiator), our implementation as the device.</summary>
     private static void TorannInitiates()
     {
-        var protocol = Torann.Protocol.Parse(Suite);
+        var protocol = Torann.NoiseProtocol.Parse(Suite);
         using var torannStatic = protocol.GenerateKeyPair();
         var ours = LinkIdentity.Generate();
 
         using var torann = protocol.CreateHandshake(initiator: true, SecureLink.Prologue, s: torannStatic);
         using var mine = new HandshakeState(initiator: false, (byte[])ours.StaticPrivateKey.Clone(), SecureLink.Prologue);
 
-        var buffer = new byte[Torann.Protocol.MaxMessageLength];
+        var buffer = new byte[Torann.NoiseProtocol.MaxMessageLength];
 
         // msg 1: Torann -> ours
         var (m1Len, _, _) = torann.WriteMessage(default, buffer);
@@ -49,7 +49,7 @@ internal static class InteropTest
         // msg 2: ours -> Torann
         var m2 = mine.WriteMessage2(SecureLink.HandshakePayload);
         Check(m2.Length == 97, "message 2 length (ours write)");
-        var payload = new byte[Torann.Protocol.MaxMessageLength];
+        var payload = new byte[Torann.NoiseProtocol.MaxMessageLength];
         var (p2Len, _, _) = torann.ReadMessage(m2, payload);
         Check(p2Len == 1 && payload[0] == 0x5A, "message 2 payload via Torann");
 
@@ -86,15 +86,15 @@ internal static class InteropTest
     /// <summary>Our implementation as the app (initiator), Torann as the device.</summary>
     private static void OursInitiates()
     {
-        var protocol = Torann.Protocol.Parse(Suite);
+        var protocol = Torann.NoiseProtocol.Parse(Suite);
         using var torannStatic = protocol.GenerateKeyPair();
         var ours = LinkIdentity.Generate();
 
         using var mine = new HandshakeState(initiator: true, (byte[])ours.StaticPrivateKey.Clone(), SecureLink.Prologue);
         using var torann = protocol.CreateHandshake(initiator: false, SecureLink.Prologue, s: torannStatic);
 
-        var buffer = new byte[Torann.Protocol.MaxMessageLength];
-        var payload = new byte[Torann.Protocol.MaxMessageLength];
+        var buffer = new byte[Torann.NoiseProtocol.MaxMessageLength];
+        var payload = new byte[Torann.NoiseProtocol.MaxMessageLength];
 
         // msg 1: ours -> Torann
         var m1 = mine.WriteMessage1();

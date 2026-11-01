@@ -19,8 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\StonyGrey\BlueConnect\Core\BlueConnect.Core.csproj" />
-    <ProjectReference Include="..\..\StonyGrey\BlueConnect\Secure\BlueConnect.Secure.csproj" />
+    <ProjectReference Include="..\..\clients\maui\StonyGrey\BlueConnect\Core\BlueConnect.Core.csproj" />
+    <ProjectReference Include="..\..\clients\maui\StonyGrey\BlueConnect\Secure\BlueConnect.Secure.csproj" />
   </ItemGroup>
 
 </Project>

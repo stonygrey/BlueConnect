@@ -12,9 +12,8 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-Exception: the files firmware/noise/src/main.c, firmware/noise/Kconfig,
-firmware/noise/prj.conf, firmware/pake/src/main.c, firmware/pake/Kconfig,
-and firmware/pake/prj.conf are derived from Nordic Semiconductor's
+Exception: the files firmware/common/src/app_main.c, firmware/noise/Kconfig,
+and firmware/noise/prj.conf are derived from Nordic Semiconductor's
 nRF Connect SDK peripheral_uart sample and remain licensed under
 LicenseRef-Nordic-5-Clause. The full text is in
 LICENSES/LicenseRef-Nordic-5-Clause.txt. Those files are not covered by

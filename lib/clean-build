@@ -2,24 +2,51 @@
 # Copyright © 2026 Stony Grey LLC.
 # SPDX-License-Identifier: MIT
 #
-# Cleans the entire build tree: every 'bin' and 'obj' folder under the repo
-# (or a given folder), the firmware build directories (firmware/*/build),
-# and the proto copies CMake configure_file drops into each firmware app
-# (firmware/*/src/verdigris.proto{,.options}). Then restores packages.
+# Cleans the build output of every platform under the repo (or a given
+# folder inside it), then restores the .NET packages. What is deleted:
 #
-# Usage: lib/clean-build [folder] [--hard] [-q|-y]
+#   .NET      every 'bin' and 'obj' folder
+#   firmware  firmware/*/build, and the proto copies CMake configure_file
+#             drops into each app (firmware/*/src/verdigris.proto{,.options})
+#   Swift     under clients/swift: SwiftPM '.build' and '.swiftpm' folders,
+#             the 'build' folder the xcodebuild commands use as derived data,
+#             and the xcodegen output (ZaffreSwift.xcodeproj and Info.plist)
+#   Kotlin    under clients/kotlin: every 'build' folder, '.gradle', '.kotlin'
+#   Flutter   under clients/flutter: 'build', '.dart_tool', '.gradle',
+#             '.kotlin', 'ephemeral', 'Pods', and '.symlinks' folders, and
+#             the .flutter-plugins-dependencies file of each package
+#   React Native  under clients/react-native: '.expo' folders, the 'ios'
+#             and 'android' folders `expo prebuild` generates for the app,
+#             and the hardware UI test's xcodegen output and build folder;
+#             node_modules is kept, because it is the installed package
+#             set, as ~/.nuget is for .NET, not build output
+#
+# The folders are the ones .gitignore lists as build output for each
+# platform. Local configuration is kept: Directory.Build.local.props,
+# Signing.local.xcconfig, signing.local.json, local.properties,
+# Package.resolved, pubspec.lock. IDE state (.idea, *.iml, .vs without
+# --hard) is kept. Only the .NET packages are restored: `swift build`,
+# Gradle, the flutter tool, and Metro resolve their dependencies on the
+# next build, lib/zaffre.swift.app regenerates the Xcode project, and
+# `expo prebuild` regenerates the React Native app's native folders.
+#
+# Usage: lib/clean-build [folder] [--hard] [-n] [-q|-y]
 #   --hard   also clears all local NuGet caches and deletes the .vs folder
+#   -n       list what would be deleted, delete nothing, skip the restore
 #   -q, -y   skip the confirmation prompt
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-FOLDER="$SCRIPT_DIR/.."
+REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
+FOLDER="$REPO"
 HARD=0
 QUIET=0
+DRY_RUN=0
 
 for arg in "$@"; do
   case "$arg" in
     --hard) HARD=1 ;;
+    -n|--dry-run) DRY_RUN=1 ;;
     -q|-y|--quiet) QUIET=1 ;;
     -*) echo "Unknown option: $arg" >&2; exit 1 ;;
     *) FOLDER="$arg" ;;
@@ -31,46 +58,79 @@ if [[ ! -d "$FOLDER" ]]; then
   exit 1
 fi
 FOLDER="$(cd "$FOLDER" && pwd)"
+case "$FOLDER" in
+  "$REPO"|"$REPO"/*) ;;
+  *) echo "$FOLDER is not inside the repo ($REPO)" >&2; exit 1 ;;
+esac
 
-if [[ $QUIET -eq 0 ]]; then
-  read -r -p "Are you sure you want to delete every build output ('bin', 'obj', firmware builds) in '$FOLDER'? (y/n) " confirmation
+if [[ $QUIET -eq 0 && $DRY_RUN -eq 0 ]]; then
+  read -r -p "Are you sure you want to delete every build output ('bin', 'obj', firmware builds, and the Swift, Kotlin, and Flutter build trees) in '$FOLDER'? (y/n) " confirmation
   if [[ "$confirmation" != "y" ]]; then
     echo "Operation cancelled."
     exit 2
   fi
 fi
 
-find "$FOLDER" -name .git -prune -o -type d \( -name bin -o -name obj \) -prune -print | while read -r dir; do
-  rm -rf "$dir"
-  echo "Deleted folder: $dir"
+# remove <path>: deletes a folder or file that exists, or lists it with -n.
+remove() {
+  local path="$1" kind
+  [[ -e "$path" ]] || return 0
+  if [[ -d "$path" ]]; then kind="folder"; else kind="file"; fi
+  if [[ $DRY_RUN -eq 1 ]]; then
+    echo "Would delete $kind: $path"
+  else
+    rm -rf "$path"
+    echo "Deleted $kind: $path"
+  fi
+}
+
+# inside <path>: true when the path is under the folder being cleaned.
+inside() {
+  case "$1" in "$FOLDER"/*) return 0 ;; esac
+  return 1
+}
+
+# One pass over the folder: the build folders of each platform, matched by
+# name within that platform's client tree, and 'bin'/'obj' anywhere. Each
+# match is pruned, so nothing inside a deleted folder is visited, and
+# node_modules is never entered.
+find "$FOLDER" \( -name .git -o -name node_modules \) -prune -o -type d \( \
+    \( -path "$REPO/clients/swift/*" \( -name .build -o -name .swiftpm -o -name build -o -name '*.xcodeproj' \) \) -o \
+    \( -path "$REPO/clients/kotlin/*" \( -name build -o -name .gradle -o -name .kotlin \) \) -o \
+    \( -path "$REPO/clients/flutter/*" \( -name build -o -name .dart_tool -o -name .gradle -o -name .kotlin \
+        -o -name ephemeral -o -name Pods -o -name .symlinks \) \) -o \
+    \( -path "$REPO/clients/react-native/*" -name .expo \) -o \
+    -name bin -o -name obj \
+  \) -prune -print0 | while IFS= read -r -d '' dir; do
+  remove "$dir"
 done
 
-# Firmware: west/CMake build trees, and the configure_file proto copies
-# (gitignored; regenerated from proto/ at the next configure).
-for dir in "$FOLDER"/firmware/*/build; do
-  if [[ -d "$dir" ]]; then
-    rm -rf "$dir"
-    echo "Deleted folder: $dir"
-  fi
+# Generated files that are not inside a build folder.
+for path in \
+    "$REPO"/firmware/*/build \
+    "$REPO"/firmware/*/src/verdigris.proto \
+    "$REPO"/firmware/*/src/verdigris.options \
+    "$REPO"/clients/swift/ZaffreSwift/Info.plist \
+    "$REPO"/clients/flutter/*/.flutter-plugins-dependencies \
+    "$REPO"/clients/react-native/zaffre_rn/ios \
+    "$REPO"/clients/react-native/zaffre_rn/android \
+    "$REPO"/clients/react-native/zaffre_rn/uitests/ZaffreReactUITests.xcodeproj \
+    "$REPO"/clients/react-native/zaffre_rn/uitests/build; do
+  inside "$path" && remove "$path"
 done
-for copy in "$FOLDER"/firmware/*/src/verdigris.proto "$FOLDER"/firmware/*/src/verdigris.options; do
-  if [[ -f "$copy" ]]; then
-    rm -f "$copy"
-    echo "Deleted file:   $copy"
-  fi
-done
+
+if [[ $DRY_RUN -eq 1 ]]; then
+  echo "Dry run: nothing deleted, packages not restored."
+  exit 0
+fi
 
 if [[ $HARD -eq 1 ]]; then
   dotnet nuget locals all --clear
-
-  if [[ -d "$FOLDER/.vs" ]]; then
-    rm -rf "$FOLDER/.vs"
-    echo "Deleted folder: $FOLDER/.vs"
-  fi
+  remove "$FOLDER/.vs"
 fi
 
 echo "Restoring packages..."
-if ! dotnet restore "$SCRIPT_DIR/../BlueConnect.slnx"; then
+if ! dotnet restore "$REPO/BlueConnect.slnx"; then
   echo "Restore failed" >&2
   exit 3
 fi

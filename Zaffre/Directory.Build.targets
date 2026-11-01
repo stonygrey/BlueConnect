@@ -1,7 +1,0 @@
-<Project>
-  <!-- Optional machine-local signing overrides. Copy
-       Directory.Build.local.props.example and fill in your Apple team.
-       Imported last so these properties win over Zaffre.csproj defaults. -->
-  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.local.props"
-          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.local.props')" />
-</Project>

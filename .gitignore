@@ -8,6 +8,8 @@
 
 # Local Apple signing / bundle-id overrides (copy from the .example)
 **/Directory.Build.local.props
+**/Signing.local.xcconfig
+**/signing.local.json
 
 # User-specific files
 *.rsuser
@@ -505,3 +507,33 @@ firmware/**/src/verdigris.options
 lib/noise-ca.key
 
 .hwtest
+
+# Native clients under clients/ (Xcode, SwiftPM, Gradle, Flutter)
+clients/swift/ZaffreSwift/ZaffreSwift.xcodeproj/
+clients/swift/ZaffreSwift/build/
+clients/swift/ZaffreSwift/Info.plist
+clients/swift/**/.build/
+clients/swift/**/.swiftpm/
+clients/swift/**/Package.resolved
+xcuserdata/
+DerivedData/
+clients/kotlin/.gradle/
+clients/kotlin/**/build/
+clients/kotlin/local.properties
+clients/kotlin/.kotlin/
+clients/flutter/**/.dart_tool/
+clients/flutter/**/build/
+clients/flutter/**/.flutter-plugins-dependencies
+clients/flutter/**/ephemeral/
+clients/flutter/**/Pods/
+clients/flutter/**/*.iml
+clients/flutter/**/.idea/
+clients/flutter/**/pubspec.lock
+clients/react-native/node_modules/
+clients/react-native/**/node_modules/
+clients/react-native/**/.expo/
+clients/react-native/zaffre_rn/ios/
+clients/react-native/zaffre_rn/android/
+clients/react-native/**/expo-env.d.ts
+clients/react-native/zaffre_rn/uitests/ZaffreReactUITests.xcodeproj/
+clients/react-native/zaffre_rn/uitests/build/

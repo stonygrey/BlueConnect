@@ -5,7 +5,7 @@
 /* BlueConnect link: Noise_XX_25519_AESGCM_SHA256 responder, pins, privilege.
  * The dispatcher-facing contract is link_iface.h; this header adds the
  * Noise app's ceremony and identity API. Framing and the Verdigris command
- * set live elsewhere. Button/LED/shell are pairing_ui.
+ * set are elsewhere. Button/LED/shell are pairing_ui.
  */
 #ifndef LINK_H_
 #define LINK_H_
@@ -47,8 +47,8 @@ enum link_provenance {
 enum link_provenance link_slot_provenance(enum link_privilege privilege);
 
 /* Rotates the device identity (vg/sk). Refuses when one exists unless
- * force — rotation makes every phone's pinned device key alarm on its next
- * session, which is the TOFU model working as intended.
+ * force — rotation makes every phone's pinned device key fail the pin check on its next
+ * session, which is what the TOFU model requires.
  */
 bool link_keygen(bool force);
 

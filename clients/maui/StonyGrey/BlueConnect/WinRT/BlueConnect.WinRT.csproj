@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <!-- Windows 11 22H2 -->
+    <SupportedOSPlatformVersion>10.0.22621.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion>10.0.22621.0</TargetPlatformMinVersion>
+    <!-- BluetoothLEAdvertisementScanParameters is absent from the 10.0.26100.57 projection
+         that the .NET SDK selects by default and present from 10.0.26100.87. Zaffre.csproj
+         pins the same version, because the app's copy of Microsoft.Windows.SDK.NET.dll is
+         the one loaded at run time. -->
+    <WindowsSdkPackageVersion>10.0.26100.87</WindowsSdkPackageVersion>
+    <RootNamespace>StonyGrey.BlueConnect.WinRT</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Configurations>Debug;Release</Configurations>
+    <!-- Allows compile-verification of this Windows-only project from macOS. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\BlueConnect.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reactive" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="StonyGrey.Logging" />
+  </ItemGroup>
+
+</Project>

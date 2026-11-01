@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:Zaffre"
+             xmlns:components="clr-namespace:Zaffre.Components"
+             x:Class="Zaffre.MainPage"
+             BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#32333D}">
+
+    <BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html" BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#32333D}">
+        <BlazorWebView.RootComponents>
+            <RootComponent Selector="#app" ComponentType="{x:Type components:Routes}" />
+        </BlazorWebView.RootComponents>
+    </BlazorWebView>
+
+</ContentPage>

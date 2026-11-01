@@ -1,0 +1,16 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@page "/high"
+@inherits ReactiveComponentBase<HighPrivilegeCommandsViewModel>
+@inject NavigationManager Navigation
+
+<MudStack Spacing="4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Navigation.NavigateTo("/"))" />
+        <MudText Typo="Typo.h5">@ViewModel!.DeviceName</MudText>
+    </MudStack>
+
+    <TestNav />
+
+    <CommandCards TViewModel="HighPrivilegeCommandsViewModel" />
+</MudStack>

@@ -3,7 +3,7 @@
  */
 
 /* Noise_XX_25519_AESGCM_SHA256 responder on PSA Crypto (Oberon/CryptoCell).
- * Mirrors the host SecureLink. Pairing buttons/LEDs/shell live in pairing_ui.
+ * Mirrors the host SecureLink. Pairing buttons/LEDs/shell are in pairing_ui.
  * Optional client endorsement (compact Ed25519 blob in XX message 3) is
  * verified here; it never grants privilege.
  */
@@ -27,6 +27,13 @@ LOG_MODULE_REGISTER(link);
 #define PROLOGUE "BlueConnectLink/1"
 
 #define HASH_LEN 32
+
+/* How long Pair waits for the button. The value is arbitrary and specific
+ * to this implementation; the host's VerdigrisPeripheral.PairTimeout is
+ * longer than it, so that the host is still waiting when the window closes
+ * and the STATUS_UNAUTHENTICATED answer is sent. The two should be kept in
+ * sync.
+ */
 #define PAIR_WINDOW_SECONDS 30
 
 /* Handshake messages 2 and 3 carry this single ignored byte instead of an
@@ -44,7 +51,7 @@ static const uint8_t hs_payload[1] = { 0x5A };
 #define ENDORSEMENT_LEN (1 + LINK_KEY_LEN + ENDORSEMENT_SIG_LEN)
 
 /* Exact on-wire sizes. XX message 1 is e plus an empty unencrypted payload.
- * A pinned client opens with IK instead (it already knows this device's
+ * A pinned client opens with IK instead (it already holds this device's
  * static key): message 1 is e + enc(s) + enc(payload) — 97 bytes, so the
  * first handshake frame's length selects the pattern unambiguously.
  * XX message 3 is dummy-sized (0x5A) or cert-sized; both are accepted.
@@ -377,7 +384,7 @@ static bool accept_xx_payload(const uint8_t *payload, size_t len,
 	}
 
 	/* No root to verify against: tolerate a well-formed cert so clients
-	 * that carry one can still talk to a rootless (e.g. freshly wiped)
+	 * that carry one can still connect to a rootless (e.g. freshly wiped)
 	 * device. The session is simply not endorsed — no privilege either way.
 	 */
 	if (!have_ca_root) {
@@ -545,9 +552,7 @@ bool link_is_paired(void)
 	return have_pin_lo || have_pin_hi;
 }
 
-/* The advertised status bitmap: slot bits; the scheme bit stays clear —
- * clear means Noise XX.
- */
+/* The advertised status bitmap: the slot bits. */
 static uint8_t secured_flags(void)
 {
 	return (have_pin_lo ? LINK_STATUS_LOW_SLOT : 0) |
@@ -721,7 +726,7 @@ static bool handshake_msg3(const uint8_t *in, size_t in_len)
  * proves the client's key and shows it already holds ours, and our reply
  * completes the session — one round trip instead of two, and this device's
  * static key never travels. A client whose pin is stale (this device was
- * wiped or rotated) fails the first decrypt and gets silence, exactly like
+ * wiped or rotated) fails the first decrypt and gets no reply, exactly like
  * any forged frame; its app surfaces the reset from the advertisement.
  */
 static bool handshake_ik(const uint8_t *in, size_t in_len,
@@ -847,18 +852,12 @@ static bool start_handshake(const uint8_t *in, size_t in_len,
 	return false;
 }
 
-bool link_handshake(uint8_t frame_type, const uint8_t *in, size_t in_len,
-			      uint8_t *out, size_t out_cap, size_t *out_len)
+bool link_handshake(const uint8_t *in, size_t in_len,
+		    uint8_t *out, size_t out_cap, size_t *out_len)
 {
 	bool ok;
 
 	*out_len = 0;
-
-	if (frame_type != LINK_TYPE_HANDSHAKE) {
-		LOG_WRN("Frame type 0x%02x is not this link's handshake dialect", frame_type);
-		link_reset();
-		return false;
-	}
 
 	switch (session.phase) {
 	case HS_IDLE:
@@ -1451,7 +1450,7 @@ bool link_keygen(bool force)
 	memset(priv, 0, sizeof(priv));
 	have_identity = true;
 	store_save("vg/sk", static_priv, LINK_KEY_LEN);
-	LOG_INF("Rotated the device identity; pinned phones will alarm next session");
+	LOG_INF("Rotated the device identity; pinned phones will fail the pin check next session");
 	return true;
 }
 

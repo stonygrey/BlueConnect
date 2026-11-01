@@ -5,7 +5,6 @@ using System.Buffers.Text;
 using System.Security.Cryptography;
 
 using StonyGrey.BlueConnect.Secure;
-using StonyGrey.Spake2Plus;
 
 namespace StonyGrey.BlueConnect.Core.Tests;
 
@@ -19,9 +18,9 @@ public class NoiseQrPayloadTests
         var device = RandomNumberGenerator.GetBytes(32);
         device[0] |= 1;
 
-        var original = new NoiseQrPayload(PakeTier.High, app, device, "Verdigris 1");
+        var original = new NoiseQrPayload(Tier.High, app, device, "Verdigris 1");
         Assert.True(NoiseQrPayload.TryParse(original.Encode(), out var parsed));
-        Assert.Equal(PakeTier.High, parsed!.Tier);
+        Assert.Equal(Tier.High, parsed!.Tier);
         Assert.Equal(app, parsed.AppPrivateKey);
         Assert.Equal(device, parsed.DevicePublicKey);
         Assert.Equal("Verdigris 1", parsed.DeviceName);

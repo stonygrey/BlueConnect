@@ -24,7 +24,7 @@ internal static class SelfTest
         var client = LinkIdentity.Generate();
         var device = LinkIdentity.Generate();
 
-        // Happy path: both sides pin each other (post-pairing state). A
+        // Success path: both sides pin each other (post-pairing state). A
         // pinned initiator opens with IK — two messages — and the responder
         // enforces its own pin against the key IK message 1 proves.
         var (clientPipe, devicePipe) = InMemoryPeripheral.CreatePair();
@@ -58,14 +58,14 @@ internal static class SelfTest
         Check(SecureLink.IkHandshakeMessage2Length == 49, "IK message 2 length");
 
         // Torann produces exactly the advertised message sizes for this dialect.
-        var protocol = Torann.Protocol.Parse(LinkProtocol.Name);
+        var protocol = Torann.NoiseProtocol.Parse(LinkProtocol.Name);
         using (var initiatorStatic = protocol.CreateKeyPair(client.StaticPrivateKey))
         using (var responderStatic = protocol.CreateKeyPair(device.StaticPrivateKey))
         using (var initiator = protocol.CreateHandshake(true, SecureLink.Prologue, s: initiatorStatic))
         using (var responder = protocol.CreateHandshake(false, SecureLink.Prologue, s: responderStatic))
         {
-            var buffer = new byte[Torann.Protocol.MaxMessageLength];
-            var scratch = new byte[Torann.Protocol.MaxMessageLength];
+            var buffer = new byte[Torann.NoiseProtocol.MaxMessageLength];
+            var scratch = new byte[Torann.NoiseProtocol.MaxMessageLength];
 
             var (m1, _, _) = initiator.WriteMessage(default, buffer);
             Check(m1 == SecureLink.HandshakeMessage1Length, "write message 1 size");

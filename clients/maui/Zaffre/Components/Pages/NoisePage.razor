@@ -1,0 +1,25 @@
+@* Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT *@
+
+@page "/noise"
+@inherits ReactiveComponentBase<LowPrivilegeCommandsViewModel>
+@inject NavigationManager Navigation
+
+<MudStack Spacing="4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="@(() => Navigation.NavigateTo("/"))" />
+        <MudText Typo="Typo.h5">@ViewModel!.DeviceName</MudText>
+    </MudStack>
+
+    <TestNav />
+
+    <PairingIntro Lead="Noise XX link security; each tier is enabled independently."
+                 PairText="Mutual key pinning, confirmed with the board's button."
+                 ProvisionText="Scan the QR created over USB"
+                 Command="lib/device noise-provision"
+                 Note="A provisioned tier cannot be re-paired." />
+
+    <MudExpansionPanels MultiExpansion="true">
+        <PairingCard TViewModel="HighPrivilegeCommandsViewModel" />
+        <PairingCard TViewModel="LowPrivilegeCommandsViewModel" />
+    </MudExpansionPanels>
+</MudStack>

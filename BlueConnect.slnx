@@ -7,22 +7,18 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/BlueConnect.Core.Tests/BlueConnect.Core.Tests.csproj" />
-    <Project Path="tests/Edhoc.Tests/Edhoc.Tests.csproj" />
-    <Project Path="tests/Spake2Plus.Tests/Spake2Plus.Tests.csproj" />
   </Folder>
-  <Project Path="Zaffre/Zaffre.csproj">
+  <Project Path="clients/maui/Zaffre/Zaffre.csproj">
     <Deploy Solution="Debug|*" />
   </Project>
   <Folder Name="/StonyGrey/">
-    <Project Path="StonyGrey/Shared/StonyGrey.Shared.csproj" />
-    <Project Path="StonyGrey/Edhoc/StonyGrey.Edhoc.csproj" />
-    <Project Path="StonyGrey/Spake2Plus/StonyGrey.Spake2Plus.csproj" />
-    <Project Path="StonyGrey/BlueConnect/Abstractions/BlueConnect.Abstractions.csproj" />
-    <Project Path="StonyGrey/BlueConnect/Core/BlueConnect.Core.csproj" />
-    <Project Path="StonyGrey/BlueConnect/CoreBluetooth/BlueConnect.CoreBluetooth.csproj" />
-    <Project Path="StonyGrey/BlueConnect/WinRT/BlueConnect.WinRT.csproj" />
-    <Project Path="StonyGrey/BlueConnect/Droid/BlueConnect.Droid.csproj" />
-    <Project Path="StonyGrey/BlueConnect/Secure/BlueConnect.Secure.csproj" />
-    <Project Path="StonyGrey/BlueConnect/Verdigris/BlueConnect.Verdigris.csproj" />
+    <Project Path="clients/maui/StonyGrey/Shared/StonyGrey.Shared.csproj" />
+    <Project Path="clients/maui/StonyGrey/BlueConnect/Abstractions/BlueConnect.Abstractions.csproj" />
+    <Project Path="clients/maui/StonyGrey/BlueConnect/Core/BlueConnect.Core.csproj" />
+    <Project Path="clients/maui/StonyGrey/BlueConnect/CoreBluetooth/BlueConnect.CoreBluetooth.csproj" />
+    <Project Path="clients/maui/StonyGrey/BlueConnect/WinRT/BlueConnect.WinRT.csproj" />
+    <Project Path="clients/maui/StonyGrey/BlueConnect/Droid/BlueConnect.Droid.csproj" />
+    <Project Path="clients/maui/StonyGrey/BlueConnect/Secure/BlueConnect.Secure.csproj" />
+    <Project Path="clients/maui/StonyGrey/BlueConnect/Verdigris/BlueConnect.Verdigris.csproj" />
   </Folder>
 </Solution>

@@ -1,0 +1,31 @@
+# Copyright © 2026 Stony Grey LLC.
+# SPDX-License-Identifier: MIT
+name: zaffre_flutter
+description: "The Flutter client of the Verdigris device: Noise XX/IK link security over BLE through the blueconnect package and Torann."
+publish_to: 'none'
+version: 1.0.2+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  blueconnect:
+    path: ../blueconnect
+  provider: 6.1.5+1
+  flutter_secure_storage: 11.2.0
+  mobile_scanner: 7.4.2
+  package_info_plus: 10.2.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  # The loopback integration test runs Torann's responder side directly.
+  torann: 0.3.1
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

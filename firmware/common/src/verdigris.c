@@ -3,9 +3,9 @@
  */
 
 /* Verdigris app API: GATT service + nanopb commands (echo, time, serial,
- * LED, sqrt, fib). Pair/Unpair are one-liners into the link. Segmentation lives
- * in segment.c; the link implementation (Noise or PAKE) is supplied by the
- * app image behind link_iface.h.
+ * LED, sqrt, fib). Pair/Unpair are single calls into the link. Segmentation is
+ * in segment.c; the Noise link implementation is firmware/noise/src/link.c
+ * behind link_iface.h.
  */
 #include "verdigris.h"
 #include "segment.h"
@@ -17,7 +17,6 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/settings/settings.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/gatt.h>
@@ -163,7 +162,7 @@ static void handle_request(struct bt_conn *conn, const uint8_t *frame, size_t le
 	enum link_privilege privilege = link_privilege();
 	enum link_privilege required;
 
-	/* Enrollment sessions sit outside the tier ladder: exactly one command
+	/* Enrollment sessions are outside the tier ladder: exactly one command
 	 * is served to them, and that command is served to nobody else.
 	 */
 	if (privilege == LINK_PRIV_ENROLL && req.which_op != verdigris_Request_enroll_tag) {
@@ -300,11 +299,7 @@ static void handle_request(struct bt_conn *conn, const uint8_t *frame, size_t le
 			strncpy(rsp.detail, "slot is locked (USB-provisioned or enrolled)",
 				sizeof(rsp.detail) - 1);
 			break;
-		case LINK_PAIR_UNSUPPORTED:
-			rsp.status = verdigris_Status_STATUS_UNKNOWN_OP;
-			strncpy(rsp.detail, "provision verifiers over USB",
-				sizeof(rsp.detail) - 1);
-			break;
+
 		default:
 			rsp.status = verdigris_Status_STATUS_UNAUTHENTICATED;
 			strncpy(rsp.detail, "pairing was not confirmed on the device",
@@ -392,9 +387,7 @@ static void verdigris_thread(void)
 					break;
 
 				case LINK_TYPE_HANDSHAKE:
-				case LINK_TYPE_PAKE:
-				case LINK_TYPE_EDHOC:
-					if (link_handshake(type, body, body_len, hs_out,
+					if (link_handshake(body, body_len, hs_out,
 							   sizeof(hs_out), &out_len) &&
 					    out_len > 0) {
 						send_typed(conn, type, hs_out, out_len);
@@ -420,25 +413,3 @@ static void verdigris_thread(void)
 }
 
 K_THREAD_DEFINE(verdigris_thread_id, 4096, verdigris_thread, NULL, NULL, NULL, 7, 0, 0);
-
-void verdigris_wipe_foreign_credentials(const char *own_prefix)
-{
-	/* Every credential key any image persists. Keep in step with the
-	 * store_save/store_delete calls in noise/link.c, edhoc/edhoc.c, and
-	 * pake/pake.c.
-	 */
-	static const char *const keys[] = {
-		"vg/sk", "vg/pin_lo", "vg/pin_hi", "vg/pin_en", "vg/lock_lo", "vg/lock_hi", "vg/ca_root",
-		"ek/key", "ek/cred", "ek/peer_lo", "ek/peer_hi",
-		"ek/lock_lo", "ek/lock_hi", "ek/fails",
-		"pk/ver_lo", "pk/ver_hi", "pk/fails",
-	};
-
-	for (size_t i = 0; i < ARRAY_SIZE(keys); i++) {
-		if (strncmp(keys[i], own_prefix, strlen(own_prefix)) == 0) {
-			continue;
-		}
-		(void)settings_delete(keys[i]);
-	}
-	LOG_INF("Wiped the other schemes' stored credentials");
-}

@@ -1,0 +1,69 @@
+#!/bin/bash
+# Copyright © 2026 Stony Grey LLC.
+# SPDX-License-Identifier: MIT
+#
+# Generates the Swift, Java/Kotlin, Dart, and TypeScript code for
+# proto/verdigris.proto into the four native clients under clients/. The C#
+# and nanopb code are generated at build time by their own toolchains; these
+# four are checked in because SwiftPM, Gradle, pub, and npm have no
+# equivalent of the C# protobuf build integration that is free of extra
+# plugins.
+#
+#   lib/gen-proto          regenerate in place
+#   lib/gen-proto --check  regenerate into a temporary folder and fail if
+#                          the checked-in code differs
+#
+# Tools: protoc and protoc-gen-swift from Homebrew, protoc-gen-dart from
+# `dart pub global activate protoc_plugin` (needs dart on the PATH; the
+# Flutter SDK is at ~/development/flutter/bin on Eamonn's Mac), and
+# protoc-gen-es from the React Native workspace's node_modules (installed
+# by `npm install` in clients/react-native). The Java and Kotlin
+# generators are built into protoc.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+export PATH="$HOME/development/flutter/bin:$HOME/.pub-cache/bin:/opt/homebrew/bin:$PATH"
+
+for tool in protoc protoc-gen-swift protoc-gen-dart; do
+    command -v "$tool" >/dev/null || { echo "$tool is not on the PATH" >&2; exit 1; }
+done
+PROTOC_GEN_ES="clients/react-native/node_modules/.bin/protoc-gen-es"
+[[ -x "$PROTOC_GEN_ES" ]] || { echo "$PROTOC_GEN_ES is missing; run npm install in clients/react-native" >&2; exit 1; }
+
+SWIFT_OUT="clients/swift/BlueConnect/Sources/BlueConnect/Generated"
+JAVA_OUT="clients/kotlin/blueconnect/src/generated/java"
+KOTLIN_OUT="clients/kotlin/blueconnect/src/generated/kotlin"
+DART_OUT="clients/flutter/blueconnect/lib/src/generated"
+TS_OUT="clients/react-native/blueconnect/src/generated"
+
+generate() {
+    local root="$1"
+    mkdir -p "$root/$SWIFT_OUT" "$root/$JAVA_OUT" "$root/$KOTLIN_OUT" "$root/$DART_OUT" "$root/$TS_OUT"
+    protoc --proto_path=proto \
+        --swift_opt=Visibility=Public \
+        --swift_out="$root/$SWIFT_OUT" \
+        --java_out="lite:$root/$JAVA_OUT" \
+        --kotlin_out="lite:$root/$KOTLIN_OUT" \
+        --dart_out="$root/$DART_OUT" \
+        --plugin=protoc-gen-es="$PROTOC_GEN_ES" \
+        --es_opt=target=ts \
+        --es_out="$root/$TS_OUT" \
+        verdigris.proto
+}
+
+if [[ "${1:-}" == "--check" ]]; then
+    tmp="$(mktemp -d)"
+    trap 'rm -rf "$tmp"' EXIT
+    generate "$tmp"
+    status=0
+    for dir in "$SWIFT_OUT" "$JAVA_OUT" "$KOTLIN_OUT" "$DART_OUT" "$TS_OUT"; do
+        diff -r "$tmp/$dir" "$dir" || status=1
+    done
+    if [[ $status -ne 0 ]]; then
+        echo "Generated protobuf code is stale; run lib/gen-proto" >&2
+    fi
+    exit $status
+fi
+
+generate "."
+echo "generated: $SWIFT_OUT $JAVA_OUT $KOTLIN_OUT $DART_OUT $TS_OUT"

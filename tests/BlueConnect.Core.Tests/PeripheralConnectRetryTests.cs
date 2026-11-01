@@ -187,7 +187,7 @@ public class PeripheralConnectRetryTests
             public string LocalName => "fake";
             public bool IsConnectable => true;
             public bool IsSecured => false;
-            public AuthenticationScheme AuthenticationScheme => AuthenticationScheme.Noise;
+
             public Rssi Rssi => new(-50, -50, -50);
             public DateTimeOffset Timestamp => timestamp;
             public bool Equals(IAdvertisement? other) => other?.Id == Id;

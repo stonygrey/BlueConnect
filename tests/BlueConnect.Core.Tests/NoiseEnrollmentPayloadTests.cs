@@ -29,7 +29,7 @@ public class NoiseEnrollmentPayloadTests
     [Fact]
     public void RejectsCredentialPayloadsAndBadBlobs()
     {
-        var credential = new NoiseQrPayload(StonyGrey.Spake2Plus.PakeTier.Low, Key(1), Key(2), null).Encode();
+        var credential = new NoiseQrPayload(Tier.Low, Key(1), Key(2), null).Encode();
         Assert.False(NoiseEnrollmentPayload.TryParse(credential, out _));
         Assert.False(NoiseQrPayload.TryParse(new NoiseEnrollmentPayload(Key(1), Key(2), null).Encode(), out _));
         Assert.False(NoiseEnrollmentPayload.TryParse("SGNE1:not-base64!", out _));

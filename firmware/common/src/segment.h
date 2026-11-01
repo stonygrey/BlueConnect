@@ -14,7 +14,11 @@
 
 #include <zephyr/bluetooth/conn.h>
 
-/* Keep in sync with VerdigrisPeripheral.MaxFrame on the host. */
+/* The largest message either side reassembles. The value is arbitrary and
+ * specific to this implementation; nothing on the wire carries it, so the
+ * host's VerdigrisPeripheral.MaxFrame must equal it and the two should be
+ * kept in sync.
+ */
 #define SEG_MAX_MESSAGE 2304
 #define SEG_ATT_MAX 256
 

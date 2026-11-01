@@ -30,8 +30,8 @@ internal static class QrOutput
     }
 
     /// <summary>
-    /// The printable label: the QR plus a main caption underneath (the PAKE
-    /// setup code; the EDHOC tier), a smaller sub-caption in gray, and —
+    /// The printable label: the QR plus a main caption underneath (the
+    /// tier), a smaller sub-caption in gray, and —
     /// when given — the full payload text wrapped in small monospace lines,
     /// so the label works without a camera (paste it into the app's payload
     /// field). The text is exactly as secret as the QR: both ARE the

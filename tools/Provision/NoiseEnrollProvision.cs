@@ -8,7 +8,7 @@ using StonyGrey.BlueConnect.Secure;
 namespace StonyGrey.BlueConnect.Provision;
 
 /// <summary>
-/// The factory flow for enrollment: mint an enrollment key, pin its public
+/// The factory flow for enrollment: generate an enrollment key, pin its public
 /// half into the device's enrollment slot over the serial shell, read the
 /// device's public key back, and emit the kit QR. A phone that scans it
 /// enrolls its own key into the device's low slot (displacing any earlier

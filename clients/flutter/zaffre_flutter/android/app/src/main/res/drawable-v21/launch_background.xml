@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright © 2026 Stony Grey LLC. SPDX-License-Identifier: MIT -->
+<!-- The window background until Flutter draws its first frame: the launcher artwork on Zaffre blue. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/ic_launcher_background" />
+    <item
+        android:drawable="@drawable/ic_launcher_foreground"
+        android:gravity="center"
+        android:width="240dp"
+        android:height="240dp" />
+</layer-list>
