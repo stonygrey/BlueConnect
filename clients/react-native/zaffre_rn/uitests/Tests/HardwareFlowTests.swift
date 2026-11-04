@@ -160,7 +160,7 @@ final class HardwareFlowTests: XCTestCase {
     /// The matching button press is simulated over USB by whoever runs the
     /// test: `lib/device confirm` must run while the pairing window is armed.
     /// The test runner on the phone cannot start a process on the host, so
-    /// the host loops the confirm (see `documents/native-clients.md`).
+    /// the host loops the confirm (see `documents/clients.md`).
     private func confirmOnBoard() {
         RunLoop.current.run(until: Date().addingTimeInterval(1))
     }

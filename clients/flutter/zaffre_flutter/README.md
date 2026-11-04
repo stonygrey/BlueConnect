@@ -41,4 +41,4 @@ advertising, the Bluetooth permissions granted, and `lib/device confirm`
 answering the pairing window. The iOS team is set in
 `ios/Flutter/Signing.local.xcconfig`, copied from the `.example` next to
 it. The full method, the permission grants, and the release build for
-the iPhone are in `documents/native-clients.md`.
+the iPhone are in `documents/clients.md`.

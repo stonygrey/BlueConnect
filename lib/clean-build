@@ -31,7 +31,7 @@
 # `expo prebuild` regenerates the React Native app's native folders.
 #
 # Usage: lib/clean-build [folder] [--hard] [-n] [-q|-y]
-#   --hard   also clears all local NuGet caches and deletes the .vs folder
+#   --hard   also clears all local NuGet caches and deletes clients/maui/.vs
 #   -n       list what would be deleted, delete nothing, skip the restore
 #   -q, -y   skip the confirmation prompt
 set -euo pipefail
@@ -126,11 +126,11 @@ fi
 
 if [[ $HARD -eq 1 ]]; then
   dotnet nuget locals all --clear
-  remove "$FOLDER/.vs"
+  inside "$REPO/clients/maui/.vs" && remove "$REPO/clients/maui/.vs"
 fi
 
 echo "Restoring packages..."
-if ! dotnet restore "$REPO/BlueConnect.slnx"; then
+if ! dotnet restore "$REPO/clients/maui/BlueConnect.slnx"; then
   echo "Restore failed" >&2
   exit 3
 fi

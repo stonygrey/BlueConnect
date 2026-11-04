@@ -179,7 +179,7 @@ final class HardwareFlowTests: XCTestCase {
     /// A Mac Catalyst test runner cannot start a process, so the app logs
     /// `ZAFFRE-PAIR: armed <tier>` when it sends `Pair`, and a watcher on the
     /// unified log runs the confirm on that line (see
-    /// `documents/native-clients.md`). On an iPhone, press the button.
+    /// `documents/clients.md`). On an iPhone, press the button.
     private func confirmOnBoard() {
         RunLoop.current.run(until: Date().addingTimeInterval(1))
     }

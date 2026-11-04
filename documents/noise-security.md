@@ -417,4 +417,4 @@ copy of the original hand-written state machine that was verified on
 air against the firmware. The remaining hand-written crypto is the
 firmware's C responder in `link.c`. The Swift, Kotlin, Dart, and
 TypeScript host implementations are described in
-[native-clients.md](native-clients.md).
+[clients.md](clients.md).

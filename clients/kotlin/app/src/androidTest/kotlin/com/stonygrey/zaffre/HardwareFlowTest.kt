@@ -27,7 +27,7 @@ import org.junit.runner.RunWith
  * It needs the board advertising, BLUETOOTH_SCAN and BLUETOOTH_CONNECT
  * granted to the app (`adb shell pm grant`), and a watcher on logcat that
  * runs `lib/device confirm` over the board's USB shell when the app logs
- * `ZAFFRE-PAIR: armed <tier>` (see `documents/native-clients.md`).
+ * `ZAFFRE-PAIR: armed <tier>` (see `documents/clients.md`).
  */
 @RunWith(AndroidJUnit4::class)
 class HardwareFlowTest {

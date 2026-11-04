@@ -11,7 +11,7 @@ import 'package:zaffre_flutter/main.dart' as app;
 /// It needs the board advertising, the Bluetooth permissions granted to the
 /// app, and a watcher on the device log that runs `lib/device confirm` over
 /// the board's USB shell when the app prints `ZAFFRE-PAIR: armed <tier>`
-/// (see `documents/native-clients.md`). The spinner on the scan page never
+/// (see `documents/clients.md`). The spinner on the scan page never
 /// settles, so the helpers pump on a fixed cadence instead of `pumpAndSettle`.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
